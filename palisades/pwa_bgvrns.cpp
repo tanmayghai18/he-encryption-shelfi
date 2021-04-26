@@ -41,16 +41,13 @@ int main() {
   kp1 = cc->KeyGen();
   cc->EvalMultKeyGen(kp1.secretKey);
 
-  auto stop = high_resolution_clock::now();
-  std::chrono::duration<double, std::milli> duration = stop - start;
-
   int numLearners = 10;
   float training_samples = 1000;
 
   cout << "Benchmarking BGVrns.." << endl;
 
-  vector<cnpy::npz_t> learners =
-      loadLearners(numLearners) vector<map<string, Plaintext>> maps;
+  vector<cnpy::npz_t> learners = loadLearners(numLearners);
+  vector<map<string, Plaintext>> maps;
   vector<string> arrays = {"arr_0", "arr_1", "arr_2", "arr_3",
                            "arr_4", "arr_5", "arr_6"};
 
@@ -84,13 +81,13 @@ int main() {
 
   cout << "Encrypting.." << endl;
 
-  start = high_resolution_clock::now();
+  auto start = high_resolution_clock::now();
 
   map<int, vector<Ciphertext<DCRTPoly>>> ciphertexts =
       encryptLearnerData(cc, kp1, maps);
 
-  stop = high_resolution_clock::now();
-  duration = stop - start;
+  auto stop = high_resolution_clock::now();
+  auto duration = stop - start;
   cout << "Time taken by a learner to encrypt parameters: "
        << duration.count() / learners.size() << " milliseconds" << endl;
 

@@ -1,6 +1,8 @@
 #include "palisade.h"
 #include <map>
 #include "../cnpy.h"
+#include <filesystem>
+#include <iostream>
 
 // utility methods for pwa calculations in pwa_bgvrns & pwa_ckks
 
@@ -8,12 +10,13 @@ using namespace std;
 using namespace lbcrypto;
 using namespace std::chrono;
 
+std::__fs::filesystem::path cwd = std::__fs::filesystem::current_path();
+
 vector<cnpy::npz_t> loadLearners(int numLearners) {
   vector<cnpy::npz_t> learners;
   for (int i = 0; i < numLearners; i++) {
     cnpy::npz_t l = cnpy::npz_load(
-        "/Users/tanmay.ghai/Desktop/palisade-development/src/pke/examples/"
-        "test_data/learners_flattened/learner1_" +
+        cwd.string() + "/learners_flattened/learner1_" +
         std::to_string(i) + ".npz");
 
     learners.push_back(l);
