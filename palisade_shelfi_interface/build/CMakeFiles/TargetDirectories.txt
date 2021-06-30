@@ -1,4 +1,3 @@
-/Users/tanmay.ghai/palisade_shelfi_interface/build/CMakeFiles/rebuild_cache.dir
-/Users/tanmay.ghai/palisade_shelfi_interface/build/CMakeFiles/edit_cache.dir
-/Users/tanmay.ghai/palisade_shelfi_interface/build/CMakeFiles/cnpy.dir
-/Users/tanmay.ghai/palisade_shelfi_interface/build/CMakeFiles/demo.dir
+/Users/hamzasaleem/Desktop/he-encryption-shelfi/palisade_shelfi_interface/build/CMakeFiles/rebuild_cache.dir
+/Users/hamzasaleem/Desktop/he-encryption-shelfi/palisade_shelfi_interface/build/CMakeFiles/edit_cache.dir
+/Users/hamzasaleem/Desktop/he-encryption-shelfi/palisade_shelfi_interface/build/CMakeFiles/demo.dir

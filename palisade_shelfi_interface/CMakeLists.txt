@@ -33,4 +33,3 @@ link_libraries( ${PALISADE_LIBRARIES} )
 ### EXAMPLE:
 ### add_executable( test demo-simple-example.cpp )
 add_executable( demo demo.cpp )
-add_library(cnpy SHARED "cnpy.cpp")

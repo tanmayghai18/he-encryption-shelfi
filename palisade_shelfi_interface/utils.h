@@ -1,37 +1,18 @@
 #include "palisade.h"
-#include "cnpy.h"
-#include "cnpy.cpp"
 #include "ciphertext-ser.h"
 #include "pubkeylp-ser.h"
-
 #include "cryptocontext-ser.h"
 #include "scheme/bgvrns/bgvrns-ser.h"
-
 #include "cryptocontext-ser.h"
 #include "scheme/ckks/ckks-ser.h"
-
+#include <string>
 
 using namespace std;
 using namespace lbcrypto;
 using namespace std::chrono;
 
-const std::string DATAFOLDER = "demoData";
+const std::string DATAFOLDER = "../CryptoParams";
 
-/**
- * input: (int) number of learners to load from .npz format, (string) path to ith learner file
- * output: (vector<cnpy::npz_t>) vector of cnpy::npz_t objects to be read
- * assumes that all learner data is located under a common directory, with the ith file stored as
- * ../learners/learner_{i} and that learner data is in the form of a flattened array
- **/
-vector<cnpy::npz_t> loadLearners(int numLearners, string learner_file) {
-	vector<cnpy::npz_t> learners;
-	for (int i = 0; i < numLearners; i++) {
-		cout << "loading in learner " << i << endl;
-		cnpy::npz_t l = cnpy::npz_load(learner_file + std::to_string(i) + ".npz");
-		learners.push_back(l);
-	}
-	return learners;
-}
 
 /**
  * input: (string) cryptoscheme to use, generates, serializes, and stores all relevant content 
@@ -45,18 +26,21 @@ int genCryptoContextAndKeyGen(string scheme) {
 		double sigma = 3.2;
 		SecurityLevel securityLevel = HEStd_128_classic;
 		uint32_t depth = 2;
+		usint batchSize = 8192;
 
 		// Instantiate the crypto context
 		cryptoContext =
 	      CryptoContextFactory<DCRTPoly>::genCryptoContextBGVrns(
-	          depth, plaintextModulus, securityLevel, sigma, depth, OPTIMIZED, BV);
+	          depth, plaintextModulus, securityLevel, sigma, depth, OPTIMIZED, BV,
+	          0, 0, 0, 0, 0,batchSize);
 
-	    std::cout << "\nThe cryptocontext has been generated." << std::endl;
+	    std::cout << "\nThe cryptocontext has been generated.\n" << std::endl;
 
 	} else if (scheme == "ckks") {
+
 		usint multDepth = 2;
   		usint scaleFactorBits = 40;
-  		usint batchSize = 8;
+  		usint batchSize = 8192;
 
 		cryptoContext = CryptoContextFactory<DCRTPoly>::genCryptoContextCKKS(
           multDepth, scaleFactorBits, batchSize);
@@ -65,7 +49,7 @@ int genCryptoContextAndKeyGen(string scheme) {
 	// enable features that you wish to use
 	cryptoContext->Enable(ENCRYPTION);
 	cryptoContext->Enable(SHE);
-	cryptoContext->Enable(LEVELEDSHE);
+	//cryptoContext->Enable(LEVELEDSHE);
 
 	std::cout << "\nThe cryptocontext has been generated." << std::endl;
 
@@ -134,226 +118,203 @@ int genCryptoContextAndKeyGen(string scheme) {
 }
 
 /**
- * input: (string) cryptoscheme to use, (vector<cnpy::npz_t>) learners, (vector<string>) arrays parameters to use per learner
- * encrypts all model weights and serializes them into a file titled `ciphertexts` in the `demoData` folder
+ * input: (string) cryptoscheme to use, (vector<vector<double>>) learner weights
+ * encrypts all model weights and serializes them into a string
  **/
-void encryption(string scheme, vector<cnpy::npz_t> learners , vector<string> arrays) {
-	vector<map<string, Plaintext>> maps;
-	// Deserialize the crypto context
-	CryptoContext<DCRTPoly> cc;
-	if (!Serial::DeserializeFromFile(DATAFOLDER + "/cryptocontext.txt", cc,
-	                               SerType::BINARY)) {
-	std::cerr << "I cannot read serialization from "
-	          << DATAFOLDER + "/cryptocontext.txt" << std::endl;
-	}
-	std::cout << "The cryptocontext has been deserialized." << std::endl;
 
-	LPPublicKey<DCRTPoly> pk;
-	if (Serial::DeserializeFromFile(DATAFOLDER + "/key-public.txt", pk,
-	                              SerType::BINARY) == false) {
-	std::cerr << "Could not read public key" << std::endl;
-	}
-	std::cout << "The public key has been deserialized." << std::endl;
+string encryption(string scheme, vector<vector<double>> learner_Data) {
 
-	if (scheme == "bgvrns") {
-		for (cnpy::npz_t learner : learners) {
-    		map<string, Plaintext> mappings;
-
-		    for (string idx : arrays) {
-		      cnpy::NpyArray arr = learner[idx];
-
-		      // cout << idx << ", " << arr.shape << endl;
-
-		      float* loaded_data = arr.data<float>();
-
-		      vector<float> curr;
-
-		      for (int i = 0; i < arr.shape[0]; i++) {
-		        curr.push_back(loaded_data[i]);
-		      }
-
-		      vector<int64_t> curr2;
-		      for (int i = 0; i < curr.size(); i++) {
-		        curr2[i] = (int64_t)curr[i];
-		      }
-
-		      Plaintext p = cc->MakePackedPlaintext(curr2);
-
-		      mappings[idx] = p;
-		    }
-    	maps.push_back(mappings);
-  		}
-	} else {
-		for (cnpy::npz_t learner : learners) {
-		    map<string, Plaintext> mappings;
-
-		    for (string idx : arrays) {
-		      cnpy::NpyArray arr = learner[idx];
-
-		      float* loaded_data = arr.data<float>();
-
-		      vector<float> curr;
-
-		      for (int i = 0; i < arr.shape[0]; i++) {
-		        curr.push_back(loaded_data[i]);
-		      }
-
-		      vector<complex<double>> curr2(curr.begin(), curr.end());
-
-		      Plaintext p = cc->MakeCKKSPackedPlaintext(curr2);
-		      mappings[idx] = p;
-		    }
-
-		    maps.push_back(mappings);
-		}
-
-	}
-
-
-
-  	map<int, vector<Ciphertext<DCRTPoly>>> ciphertexts;
-
-	for (int i = 0; i < maps.size(); i++) {
-		map<string, Plaintext> m = maps[i];
-		map<string, Plaintext>::iterator it;
-
-		vector<Ciphertext<DCRTPoly>> curr;
-
-		for (it = m.begin(); it != m.end(); it++) {
-		  Ciphertext<DCRTPoly> ciphertext = cc->Encrypt(pk, it->second);
-		  curr.push_back(ciphertext);
-		}
-		ciphertexts[i] = curr;
-	}
-
-	if (!Serial::SerializeToFile(DATAFOLDER + "/ciphertexts.txt",
-	                           ciphertexts, SerType::BINARY)) {
-	std::cerr << "Error writing serialization of ciphertexts"
-	          << std::endl;
-	}
-	std::cout << "The ciphertexts have been serialized." << std::endl;
-}
-
-
-/**
- * input: (string) scheme, (float) # of training samples, learners, arrays
- * computes private weighted average over all learner data and serializes it to `pwa.txt` in `demoData`
- **/
-void computeWeightedAverage(string scheme, float training_samples, vector<cnpy::npz_t> learners, vector<string> arrays) {
-	map<int, vector<Ciphertext<DCRTPoly>>> ciphertexts;
-	if (!Serial::DeserializeFromFile(DATAFOLDER + "/ciphertexts.txt", ciphertexts,
-	                               SerType::BINARY)) {
-	std::cerr << "I cannot read serialization from "
-	          << DATAFOLDER + "/ciphertexts.txt" << std::endl;
-	}
-	std::cout << "The ciphertexts have been deserialized." << std::endl;
-
-	std::ifstream emkeys(DATAFOLDER + "/key-eval-mult.txt",
-	                   std::ios::in | std::ios::binary);
 
 	CryptoContext<DCRTPoly> cc;
-	if (!Serial::DeserializeFromFile(DATAFOLDER + "/cryptocontext.txt", cc,
-	                               SerType::BINARY)) {
-	std::cerr << "I cannot read serialization from "
-	          << DATAFOLDER + "/cryptocontext.txt" << std::endl;
-	}
-	std::cout << "The cryptocontext has been deserialized." << std::endl;
+    if (!Serial::DeserializeFromFile(DATAFOLDER + "/cryptocontext.txt", cc,
+                                   SerType::BINARY)) {
+    std::cerr << "Could not read serialization from "
+              << DATAFOLDER + "/cryptocontext.txt" << std::endl;
+    }
 
-	LPPublicKey<DCRTPoly> pk;
-	if (Serial::DeserializeFromFile(DATAFOLDER + "/key-public.txt", pk,
-	                              SerType::BINARY) == false) {
-	std::cerr << "Could not read public key" << std::endl;
-	}
-	std::cout << "The public key has been deserialized." << std::endl;
-
-	if (!emkeys.is_open()) {
-	std::cerr << "I cannot read serialization from "
-	          << DATAFOLDER + "/key-eval-mult.txt" << std::endl;
-	}
-	if (cc->DeserializeEvalMultKey(emkeys, SerType::BINARY) == false) {
-	std::cerr << "Could not deserialize the eval mult key file" << std::endl;
-
-	}
-	std::cout << "Deserialized the eval mult keys." << std::endl;
+    LPPublicKey<DCRTPoly> pk;
+    if (Serial::DeserializeFromFile(DATAFOLDER + "/key-public.txt", pk,
+                                  SerType::BINARY) == false) {
+    std::cerr << "Could not read public key" << std::endl;
+    }
 
 
+    vector<Ciphertext<DCRTPoly>> ciphertext_data;
 
-	long weight = training_samples / (learners.size() * training_samples);
-	vector<int64_t> weights(training_samples);
-  	std::fill(weights.begin(), weights.end(), weight);
-  	auto pw = cc->MakePackedPlaintext(weights);
 
-	vector<Ciphertext<DCRTPoly>> c0 = ciphertexts[0];
-	auto pwa = cc->EvalMult(pw, c0[0]);
+    if (scheme == "ckks") {
 
-	if (scheme == "bgvrns") {
+    	for(int i=0; i<learner_Data.size(); i++){
 
-	    for (int i = 0; i < arrays.size(); i++) {
-	        for (int j = 0; j < learners.size(); j++) {
-	          if (i == 0 && j == 0) {
-	        } else {
-	        // cout << i << ", " << j << endl;
-	        vector<Ciphertext<DCRTPoly>> c = ciphertexts[j];
-	        cc->EvalAdd(pwa, cc->EvalMult(pw, c[i]));
-	        }
-	      }
-	    } 
+	        vector<complex<double>> row(learner_Data[i].begin(), learner_Data[i].end());
+	        Plaintext plaintext_data = cc->MakeCKKSPackedPlaintext(row);
+	        ciphertext_data.push_back(cc->Encrypt(pk, plaintext_data));
 
-	} else {
-  		for (int i = 0; i < arrays.size(); i++) {
-    		for (int j = 0; j < learners.size(); j++) {
-      			if (i == 0 && j == 0) {
-      			} else {
-        		//cout << i << ", " << j << endl;
-        		vector<Ciphertext<DCRTPoly>> c = ciphertexts[j];
-        		cc->EvalAdd(pwa, cc->EvalMult(c[i], weight));
-      			}
-    		}
-  		}
-	}
+    	}
 
-	if (!Serial::SerializeToFile(DATAFOLDER + "/pwa.txt",
-	                           pwa, SerType::BINARY)) {
-	std::cerr << "Error writing serialization of private weighted average"
-	          << std::endl;
-	}
-	std::cout << "pwa been serialized." << std::endl;
+
+
+    }
+    else if(scheme == "bgvrns"){
+
+
+    	/*for(int i=0; i<learner_Data.size(); i++){
+
+	        vector<int> row(learner_Data[i].begin(), learner_Data[i].end());
+	        Plaintext plaintext_data = cc->MakePackedPlaintext(row);
+	        ciphertext_data.push_back(cc->Encrypt(pk, plaintext_data));
+
+    	}*/
+
+
+
+    }
+
+
+    
+
+
+    stringstream s;
+    const SerType::SERBINARY st;
+    Serial::Serialize(ciphertext_data, s, st);
+
+    return s.str();
 
 }
 
 
 /**
- * decrypts pwa
+ * input: (string) scheme, (vector<string>) learners_Data a vector of binary ciphertext of all learners,
+ * (vector<float>) scalingFactors is a vector with scaling factor for each learner
+ * computes private weighted average over all learner data returns binary ciphertext of result
  **/
-Plaintext decryption() {
-	Ciphertext<DCRTPoly> pwa;
+
+string computeWeightedAverage(string scheme, vector<string> learners_Data, vector<float> scalingFactors) {
+
+	if(learners_Data.size() != scalingFactors.size()){
+		cout<<"Error: learners_Data and scalingFactors size mismatch"<<endl;
+		return "";
+	}
+
 
 	CryptoContext<DCRTPoly> cc;
-	if (!Serial::DeserializeFromFile(DATAFOLDER + "/cryptocontext.txt", cc,
-	                               SerType::BINARY)) {
-	std::cerr << "I cannot read serialization from "
-	          << DATAFOLDER + "/cryptocontext.txt" << std::endl;
+    if (!Serial::DeserializeFromFile(DATAFOLDER + "/cryptocontext.txt", cc,
+                                   SerType::BINARY)) {
+    std::cerr << "Could not read serialization from "
+              << DATAFOLDER + "/cryptocontext.txt" << std::endl;
+    }
+
+
+	const SerType::SERBINARY st;
+	vector<Ciphertext<DCRTPoly>> result_ciphertext;
+
+
+
+	for(int i=0; i<learners_Data.size(); i++){
+
+		stringstream ss(learners_Data[i]);
+		vector<Ciphertext<DCRTPoly>> learner_ciphertext;
+
+		Serial::Deserialize(learner_ciphertext, ss, st);
+
+
+		for(int j=0; j<learner_ciphertext.size(); j++){
+
+			learner_ciphertext[j] = cc->EvalMult(learner_ciphertext[j], scalingFactors[i]);
+
+		}
+
+
+		if(result_ciphertext.size() == 0){
+
+			result_ciphertext = learner_ciphertext;
+		}
+
+		else{
+
+			for(int j=0; j<learner_ciphertext.size(); j++){
+
+				result_ciphertext[j] = cc->EvalAdd(result_ciphertext[j], learner_ciphertext[j]);
+
+			}
+
+		}
+
+
 	}
-	std::cout << "The cryptocontext has been deserialized." << std::endl;
 
-	LPPrivateKey<DCRTPoly> sk;
-	if (Serial::DeserializeFromFile(DATAFOLDER + "/key-private.txt", sk,
-	                              SerType::BINARY) == false) {
-	std::cerr << "Could not read secret key" << std::endl;
+
+	stringstream ss;
+    Serial::Serialize(result_ciphertext, ss, st);
+
+    return ss.str();
+
+
+}
+
+
+/**
+ * data_dimesions is a list containing number of parameters in each layer 
+ **/
+vector<vector<double>> decryption(string scheme, string learner_Data, vector<int> data_dimesions) {
+
+
+
+	CryptoContext<DCRTPoly> cc;
+    if (!Serial::DeserializeFromFile(DATAFOLDER + "/cryptocontext.txt", cc,
+                                   SerType::BINARY)) {
+    std::cerr << "Could not read serialization from "
+              << DATAFOLDER + "/cryptocontext.txt" << std::endl;
+    }
+
+
+    LPPrivateKey<DCRTPoly> sk;
+    if (Serial::DeserializeFromFile(DATAFOLDER + "/key-private.txt", sk,
+                                  SerType::BINARY) == false) {
+    std::cerr << "Could not read secret key" << std::endl;
+    }
+
+
+    const SerType::SERBINARY st;
+    stringstream ss(learner_Data);
+	
+	vector<Ciphertext<DCRTPoly>> learner_ciphertext;
+	Serial::Deserialize(learner_ciphertext, ss, st);
+
+
+	vector<vector<double>> result;
+
+
+
+	for(int i=0; i<learner_ciphertext.size(); i++){
+
+		Plaintext pt;
+    	cc->Decrypt(sk, learner_ciphertext[i], &pt);
+
+    	pt->SetLength(data_dimesions[i]);
+
+    	//cout<<pt<<endl<<endl<<endl;
+
+    	vector<complex<double>> layer_complex = pt->GetCKKSPackedValue();
+    	
+
+    	vector<double> layer_real;
+
+    	for(int j=0; j<layer_complex.size(); j++){
+
+    		layer_real.push_back(layer_complex[j].real());
+
+    	}
+
+    	result.push_back(layer_real);
+
+
 	}
-	std::cout << "The secret key has been deserialized." << std::endl;
 
-	if (!Serial::DeserializeFromFile(DATAFOLDER + "/pwa.txt", pwa,
-	                               SerType::BINARY)) {
-	std::cerr << "I cannot read serialization from "
-	          << DATAFOLDER + "/pwa.txt" << std::endl;
-	}
-	std::cout << "pwa has been deserialized." << std::endl;
 
-	Plaintext decryptResult;
-  	cc->Decrypt(sk, pwa, &decryptResult);
+	return result;
 
-  	return decryptResult;
+    
   	
 
 }

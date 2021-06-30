@@ -1,39 +1,94 @@
 #include "utils.h"
 #include "palisade.h"
+#include <random>
+#include <string>
 
 using namespace std;
 using namespace lbcrypto;
 using namespace std::chrono;
 
+
+void generateRandomData(vector<vector<double>>& learner_Data, int rows, int cols){
+
+    double lower_bound = 0;
+    double upper_bound = 100;
+    std::uniform_real_distribution<double> unif(lower_bound,upper_bound);
+    std::default_random_engine re;
+    //double a_random_double = unif(re);
+
+    for(int i=0; i<rows; i++){
+
+        vector<double> arr;
+
+        for(int j=0; j<cols; j++){
+
+            arr.push_back(unif(re));
+
+            // arr.push_back(i);
+
+        }
+
+        learner_Data.push_back(arr);
+
+
+    }
+
+
+}
+
+
 int main() {
 	string scheme = "ckks";
  
 	//generates the cryptocontext and necessary keys
-	genCryptoContextAndKeyGen(scheme);
+    //run if required for the first time
+    //keys are stored in CryptoParams folder
+	//genCryptoContextAndKeyGen(scheme);
 
-	cout << "\n" << endl;
 
-	//learner data and number of parameters used per learner
-	vector<cnpy::npz_t> learners =
-      loadLearners(14, "/Users/tanmay.ghai/palisade_shelfi_interface/learners_flattened/learner1_");
-      //{"arr_0",  "arr_1",  "arr_2",  "arr_3", "arr_4", 
-      //      "arr_5",  "arr_6",  "arr_7",  "arr_8", "arr_9", 
-      //      "arr_10", "arr_11", "arr_12", "arr_13"}
-       vector<string> arrays = {"arr_0", "arr_1", "arr_2", "arr_3","arr_4", "arr_5", "arr_6"};
+    //geneting random data for testing.
+    vector<vector<double>> learner_Data;
 
-    cout << "\n" << endl;
+    // 10 layers each with 20 parameters
+    generateRandomData(learner_Data, 10, 20);
 
-    //encryption api, serializes ciphertexts for pwa computation
-    encryption(scheme, learners, arrays);
+    cout<<"Learner Data: "<<endl;
 
-    cout << "\n" << endl;
+    cout<<learner_Data<<endl<<endl<<endl;
 
-    //computes pwa over encrypted model, serializes and stores result for decryption
-    computeWeightedAverage(scheme, 1000, learners, arrays);
+    string enc_result = encryption(scheme, learner_Data);
 
-     cout << "\n" << endl;
+    vector<string> learners_Data;
 
-	//decrypts pwa result
-     decryption();
+    cout<<"Encrypting"<<endl;
+
+    learners_Data.push_back(enc_result);
+    learners_Data.push_back(enc_result);
+    learners_Data.push_back(enc_result);
+
+    vector<float> scalingFactors;
+
+    scalingFactors.push_back(0.5);
+    scalingFactors.push_back(0.3);
+    scalingFactors.push_back(0.5);
+
+    cout<<"Computing 0.5*L + 0.3*L + 0.5*L"<<endl;
+
+
+    string pwa_result = computeWeightedAverage(scheme, learners_Data, scalingFactors);
+
+    vector<int> data_dimensions(learner_Data.size(),20);
+
+    cout<<"Decrypting"<<endl;
+
+    vector<vector<double>> pwa_res_pt = decryption(scheme, pwa_result, data_dimensions);
+
+
+    cout<<"Result:"<<endl;
+
+    cout<<pwa_res_pt<<endl<<endl<<endl<<endl;
+
+
+
 
 }
