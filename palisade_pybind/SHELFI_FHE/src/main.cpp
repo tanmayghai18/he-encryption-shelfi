@@ -28,7 +28,7 @@ using namespace std::chrono;
 #define MACRO_STRINGIFY(x) STRINGIFY(x)
 
 
-const std::string DATAFOLDER = "CryptoParams";
+const std::string DATAFOLDER = "SHELFI_FHE/CryptoParams";
 namespace py = pybind11;
 
 
