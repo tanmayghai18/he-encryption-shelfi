@@ -80,7 +80,7 @@ int genCryptoContextAndKeyGen(string scheme) {
     } else if (scheme == "ckks") {
 
         usint multDepth = 2;
-        usint scaleFactorBits = 40;
+        usint scaleFactorBits = 52;
         usint batchSize = 8192;
 
         cryptoContext = CryptoContextFactory<DCRTPoly>::genCryptoContextCKKS(
@@ -165,7 +165,7 @@ int genCryptoContextAndKeyGen(string scheme) {
  * encrypts all model weights and serializes them into a string
  **/
 
-py::bytes encryption(string scheme, VecVecComplex learner_Data) {
+py::bytes encryption(string scheme, ComplexVector learner_Data) {
 
 
     CryptoContext<DCRTPoly> cc;
@@ -182,17 +182,14 @@ py::bytes encryption(string scheme, VecVecComplex learner_Data) {
     }
 
 
-    vector<Ciphertext<DCRTPoly>> ciphertext_data;
+    Ciphertext<DCRTPoly> ciphertext_data;
 
 
     if (scheme == "ckks") {
 
-        for (auto row : learner_Data){
+        Plaintext plaintext_data = cc->MakeCKKSPackedPlaintext(learner_Data);
 
-            Plaintext plaintext_data = cc->MakeCKKSPackedPlaintext(row);
-            ciphertext_data.push_back(cc->Encrypt(pk, plaintext_data));
-        }
-
+        ciphertext_data = cc->Encrypt(pk, plaintext_data);
 
     }
     else {
@@ -244,7 +241,6 @@ py::bytes computeWeightedAverage(string scheme, StringList learners_Data, FloatV
     }
 
 
-
     if(learners_Data.size() != scalingFactors.size()){
         cout<<"Error: learners_Data and scalingFactors size mismatch"<<endl;
         return "";
@@ -260,39 +256,30 @@ py::bytes computeWeightedAverage(string scheme, StringList learners_Data, FloatV
 
 
     const SerType::SERBINARY st;
-    vector<Ciphertext<DCRTPoly>> result_ciphertext;
+    Ciphertext<DCRTPoly> result_ciphertext;
 
 
 
-    for(int i=0; i<learners_Data.size(); i++){
+    for(long unsigned int i=0; i<learners_Data.size(); i++){
 
         stringstream ss(learners_Data[i]);
-        vector<Ciphertext<DCRTPoly>> learner_ciphertext;
+        Ciphertext<DCRTPoly> learner_ciphertext;
 
         Serial::Deserialize(learner_ciphertext, ss, st);
 
+        float sc = scalingFactors[i];
 
-        for(int j=0; j<learner_ciphertext.size(); j++){
-
-            float sc = scalingFactors[i];
-
-            learner_ciphertext[j] = cc->EvalMult(learner_ciphertext[j], sc);
-
-        }
+        learner_ciphertext = cc->EvalMult(learner_ciphertext, sc);
 
 
-        if(result_ciphertext.size() == 0){
+        if(i == 0){
 
             result_ciphertext = learner_ciphertext;
         }
 
         else{
 
-            for(int j=0; j<learner_ciphertext.size(); j++){
-
-                result_ciphertext[j] = cc->EvalAdd(result_ciphertext[j], learner_ciphertext[j]);
-
-            }
+            result_ciphertext = cc->EvalAdd(result_ciphertext, learner_ciphertext);
 
         }
 
@@ -313,8 +300,7 @@ py::bytes computeWeightedAverage(string scheme, StringList learners_Data, FloatV
  * data_dimesions is a list containing number of parameters in each layer 
  **/
 
-VecVecDouble decryption(string scheme, string learner_Data, IntVector data_dimesions) {
-
+vector<double> decryption(string scheme, string learner_Data, unsigned long int data_dimesions) {
 
 
     CryptoContext<DCRTPoly> cc;
@@ -335,43 +321,31 @@ VecVecDouble decryption(string scheme, string learner_Data, IntVector data_dimes
     const SerType::SERBINARY st;
     stringstream ss(learner_Data);
     
-    vector<Ciphertext<DCRTPoly>> learner_ciphertext;
+    Ciphertext<DCRTPoly> learner_ciphertext;
     Serial::Deserialize(learner_ciphertext, ss, st);
 
 
-    vector<vector<double>> result;
+    vector<double> result;
 
 
+    Plaintext pt;
+    cc->Decrypt(sk, learner_ciphertext, &pt);
 
-    for(int i=0; i<learner_ciphertext.size(); i++){
+    pt->SetLength(data_dimesions);
 
-        Plaintext pt;
-        cc->Decrypt(sk, learner_ciphertext[i], &pt);
+    vector<complex<double>> layer_complex = pt->GetCKKSPackedValue();
 
-        pt->SetLength(data_dimesions[i]);
 
-        //cout<<pt<<endl<<endl<<endl;
+    vector<double> layer_real;
 
-        vector<complex<double>> layer_complex = pt->GetCKKSPackedValue();
-        
+    for(long unsigned int j=0; j<layer_complex.size(); j++){
 
-        vector<double> layer_real;
-
-        for(int j=0; j<layer_complex.size(); j++){
-
-            layer_real.push_back(layer_complex[j].real());
-
-        }
-
-        result.push_back(layer_real);
-
+        layer_real.push_back(layer_complex[j].real());
 
     }
 
+    return layer_real;
 
-    return result;
-
-    
     
 
 }
