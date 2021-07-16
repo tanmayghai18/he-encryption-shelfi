@@ -31,6 +31,8 @@ using namespace std::chrono;
 const std::string DATAFOLDER = "SHELFI_FHE/CryptoParams";
 namespace py = pybind11;
 
+usint batchSize = 8192;
+
 
 PYBIND11_MAKE_OPAQUE(std::vector<float, std::allocator<float>>);
 using FloatVector = std::vector<float, std::allocator<float>>;
@@ -67,7 +69,7 @@ int genCryptoContextAndKeyGen(string scheme) {
         double sigma = 3.2;
         SecurityLevel securityLevel = HEStd_128_classic;
         uint32_t depth = 2;
-        usint batchSize = 8192;
+        
 
         // Instantiate the crypto context
         cryptoContext =
@@ -81,7 +83,7 @@ int genCryptoContextAndKeyGen(string scheme) {
 
         usint multDepth = 2;
         usint scaleFactorBits = 52;
-        usint batchSize = 8192;
+        
 
         cryptoContext = CryptoContextFactory<DCRTPoly>::genCryptoContextCKKS(
           multDepth, scaleFactorBits, batchSize);
@@ -182,14 +184,43 @@ py::bytes encryption(string scheme, ComplexVector learner_Data) {
     }
 
 
-    Ciphertext<DCRTPoly> ciphertext_data;
+    vector<Ciphertext<DCRTPoly>> ciphertext_data((int)((learner_Data.size() + batchSize) / batchSize));
 
 
     if (scheme == "ckks") {
 
+
+        if(learner_Data.size()>(long unsigned int)batchSize){
+
+            int j=0;
+
+            for(long unsigned int i = 0; i < learner_Data.size(); i += batchSize) {
+
+                auto last = std::min(learner_Data.size(), i + batchSize);
+
+                ComplexVector batch(learner_Data.begin() + i, learner_Data.begin() + last);
+
+                Plaintext plaintext_data = cc->MakeCKKSPackedPlaintext(batch);
+                ciphertext_data[j++] = cc->Encrypt(pk, plaintext_data);
+
+
+            }
+
+        }
+
+        else{
+
         Plaintext plaintext_data = cc->MakeCKKSPackedPlaintext(learner_Data);
 
-        ciphertext_data = cc->Encrypt(pk, plaintext_data);
+        ciphertext_data[0] = cc->Encrypt(pk, plaintext_data);
+
+
+        }
+
+
+
+
+       
 
     }
     else {
@@ -210,13 +241,10 @@ py::bytes encryption(string scheme, ComplexVector learner_Data) {
 
     }
 
-   
 
     stringstream s;
     const SerType::SERBINARY st;
     Serial::Serialize(ciphertext_data, s, st);
-
-
 
 
     return py::bytes(s.str());
@@ -256,30 +284,40 @@ py::bytes computeWeightedAverage(string scheme, StringList learners_Data, FloatV
 
 
     const SerType::SERBINARY st;
-    Ciphertext<DCRTPoly> result_ciphertext;
+
+    vector<Ciphertext<DCRTPoly>> result_ciphertext;
 
 
 
-    for(long unsigned int i=0; i<learners_Data.size(); i++){
+     for(unsigned long int i=0; i<learners_Data.size(); i++){
 
         stringstream ss(learners_Data[i]);
-        Ciphertext<DCRTPoly> learner_ciphertext;
+        vector<Ciphertext<DCRTPoly>> learner_ciphertext;
 
         Serial::Deserialize(learner_ciphertext, ss, st);
 
-        float sc = scalingFactors[i];
 
-        learner_ciphertext = cc->EvalMult(learner_ciphertext, sc);
+        for(unsigned long int j=0; j<learner_ciphertext.size(); j++){
+
+            float sc = scalingFactors[i];
+
+            learner_ciphertext[j] = cc->EvalMult(learner_ciphertext[j], sc);
+
+        }
 
 
-        if(i == 0){
+        if(result_ciphertext.size() == 0){
 
             result_ciphertext = learner_ciphertext;
         }
 
         else{
 
-            result_ciphertext = cc->EvalAdd(result_ciphertext, learner_ciphertext);
+            for(unsigned long int j=0; j<learner_ciphertext.size(); j++){
+
+                result_ciphertext[j] = cc->EvalAdd(result_ciphertext[j], learner_ciphertext[j]);
+
+            }
 
         }
 
@@ -321,32 +359,48 @@ vector<double> decryption(string scheme, string learner_Data, unsigned long int 
     const SerType::SERBINARY st;
     stringstream ss(learner_Data);
     
-    Ciphertext<DCRTPoly> learner_ciphertext;
+    vector<Ciphertext<DCRTPoly>> learner_ciphertext;
     Serial::Deserialize(learner_ciphertext, ss, st);
 
 
     vector<double> result;
 
 
-    Plaintext pt;
-    cc->Decrypt(sk, learner_ciphertext, &pt);
+    for(unsigned long int i=0; i<learner_ciphertext.size(); i++){
 
-    pt->SetLength(data_dimesions);
+        Plaintext pt;
+        cc->Decrypt(sk, learner_ciphertext[i], &pt);
 
-    vector<complex<double>> layer_complex = pt->GetCKKSPackedValue();
+        int length;
 
+        if(i==learner_ciphertext.size()-1){
 
-    vector<double> layer_real;
+            length = data_dimesions - (i)*batchSize;
+        }
 
-    for(long unsigned int j=0; j<layer_complex.size(); j++){
+        else{
 
-        layer_real.push_back(layer_complex[j].real());
+            length = batchSize;
+        }
+
+        pt->SetLength(length);
+
+        //cout<<pt<<endl<<endl<<endl;
+
+        vector<complex<double>> layer_complex = pt->GetCKKSPackedValue();
+        
+
+        for(int j=0; j<layer_complex.size(); j++){
+
+            result.push_back(layer_complex[j].real());
+
+        }
+
 
     }
 
-    return layer_real;
 
-    
+    return result;
 
 }
 
