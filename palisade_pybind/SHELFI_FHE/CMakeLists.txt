@@ -34,3 +34,8 @@ pybind11_add_module(SHELFI_FHE src/main.cpp)
 # EXAMPLE_VERSION_INFO is defined by setup.py and passed into the C++ code as a
 # define (VERSION_INFO) here.
 target_compile_definitions(SHELFI_FHE PRIVATE VERSION_INFO=${EXAMPLE_VERSION_INFO})
+
+# We need to adjust the prefix and the suffix of the target because by default the
+# generated pybind11 shared object has the OS distribution as part of its suffix.
+# Name target as `target_name` with ".so" extension.
+set_target_properties(SHELFI_FHE PROPERTIES PREFIX "" SUFFIX ".so")
