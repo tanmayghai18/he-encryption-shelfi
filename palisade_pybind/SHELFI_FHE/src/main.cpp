@@ -28,7 +28,7 @@ using namespace std::chrono;
 #define MACRO_STRINGIFY(x) STRINGIFY(x)
 
 
-const std::string DATAFOLDER = "SHELFI_FHE/CryptoParams";
+const std::string DATAFOLDER = "CryptoParams";
 namespace py = pybind11;
 
 usint batchSize = 8192;
