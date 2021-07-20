@@ -9,13 +9,13 @@ To run this:
 
 Install Palisades and Pybind11.
 
-Then open terminal in the palisade_pybind folder and install the library as:
+Then open terminal in the palisade_pybind/SHELFI_FHE/src folder and install the library as:
 
-pip install ./SHELFI_FHE
+pip install ../
 
 Then you can test the library using a sample python script in SHELFI_FHE/tests/test.py as:
 
-python3 SHELFI_FHE/tests/test.py
+python3 ../tests/test.py
 
 
 palisade_shelfi_interface folder contains the normal C++ implementation of the weighted average computation which make be compiled using cmake.
