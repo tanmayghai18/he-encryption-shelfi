@@ -390,7 +390,7 @@ vector<double> decryption(string scheme, string learner_Data, unsigned long int 
         vector<complex<double>> layer_complex = pt->GetCKKSPackedValue();
         
 
-        for(int j=0; j<layer_complex.size(); j++){
+        for(long unsigned int j=0; j<layer_complex.size(); j++){
 
             result.push_back(layer_complex[j].real());
 
