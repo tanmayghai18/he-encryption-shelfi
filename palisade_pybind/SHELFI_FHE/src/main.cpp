@@ -452,6 +452,7 @@ PYBIND11_MODULE(SHELFI_FHE, m) {
     py::class_<StringList>(m, "StringList")
         .def(py::init<>())
         .def("pop_back", &StringList::pop_back)
+        .def("clear", &StringList::clear)
         // There are multiple versions of push_back(), etc. Select the right ones. 
         .def("push_back", (void (StringList::*)(const std::string &)) &StringList::push_back)
         .def("back", (std::string &(StringList::*)()) &StringList::back)
@@ -464,6 +465,7 @@ PYBIND11_MODULE(SHELFI_FHE, m) {
     py::class_<VecVecDouble>(m, "VecVecDouble")
         .def(py::init<>())
         .def("pop_back", &VecVecDouble::pop_back)
+        .def("clear", &VecVecDouble::clear)
         /* There are multiple versions of push_back(), etc. Select the right ones. */
         .def("push_back", (void (VecVecDouble::*)(const vector<double> &)) &VecVecDouble::push_back)
         .def("back", (vector<double> &(VecVecDouble::*)()) &VecVecDouble::back)
@@ -476,6 +478,8 @@ PYBIND11_MODULE(SHELFI_FHE, m) {
     py::class_<VecVecComplex>(m, "VecVecComplex")
         .def(py::init<>())
         .def("pop_back", &VecVecComplex::pop_back)
+        .def("clear", &VecVecComplex::clear)
+
         // There are multiple versions of push_back(), etc. Select the right ones. 
         .def("push_back", (void (VecVecComplex::*)(const vector<complex<double>> &)) &VecVecComplex::push_back)
         .def("back", (vector<complex<double>> &(VecVecComplex::*)()) &VecVecComplex::back)
