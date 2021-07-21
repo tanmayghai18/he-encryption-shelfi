@@ -4,7 +4,7 @@ from random import random
 
 #if we want to generate the encryption keys for the first time
 #m.genCryptoContextAndKeyGen("ckks")
-data_dimesions = 1000000
+data_dimesions = 1000
 
 #scaling factor for each of 3 learners
 

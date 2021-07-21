@@ -203,6 +203,8 @@ py::bytes encryption(string scheme, ComplexVector learner_Data) {
                 Plaintext plaintext_data = cc->MakeCKKSPackedPlaintext(batch);
                 ciphertext_data[j++] = cc->Encrypt(pk, plaintext_data);
 
+                batch.clear();
+
 
             }
 
@@ -245,6 +247,8 @@ py::bytes encryption(string scheme, ComplexVector learner_Data) {
     stringstream s;
     const SerType::SERBINARY st;
     Serial::Serialize(ciphertext_data, s, st);
+
+    ciphertext_data.clear();
 
 
     return py::bytes(s.str());
@@ -321,12 +325,16 @@ py::bytes computeWeightedAverage(string scheme, StringList learners_Data, FloatV
 
         }
 
+        learner_ciphertext.clear();
+
 
     }
 
 
     stringstream ss;
     Serial::Serialize(result_ciphertext, ss, st);
+
+    result_ciphertext.clear();
 
     return py::bytes(ss.str());
 
@@ -398,6 +406,8 @@ vector<double> decryption(string scheme, string learner_Data, unsigned long int 
 
 
     }
+
+    learner_ciphertext.clear();
 
 
     return result;
