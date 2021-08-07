@@ -39,19 +39,19 @@ cmake_force:
 SHELL = /bin/sh
 
 # The CMake executable.
-CMAKE_COMMAND = /usr/local/Cellar/cmake/3.16.2/bin/cmake
+CMAKE_COMMAND = /usr/bin/cmake
 
 # The command to remove a file.
-RM = /usr/local/Cellar/cmake/3.16.2/bin/cmake -E remove -f
+RM = /usr/bin/cmake -E remove -f
 
 # Escaping for special characters.
 EQUALS = =
 
 # The top-level source directory on which CMake was run.
-CMAKE_SOURCE_DIR = /Users/hamzasaleem/Desktop/he-encryption-shelfi/palisade_shelfi_interface
+CMAKE_SOURCE_DIR = /home/parallels/Desktop/he-encryption-shelfi/palisade_shelfi_interface
 
 # The top-level build directory on which CMake was run.
-CMAKE_BINARY_DIR = /Users/hamzasaleem/Desktop/he-encryption-shelfi/palisade_shelfi_interface/build
+CMAKE_BINARY_DIR = /home/parallels/Desktop/he-encryption-shelfi/palisade_shelfi_interface/build
 
 #=============================================================================
 # Targets provided globally by CMake.
@@ -59,7 +59,7 @@ CMAKE_BINARY_DIR = /Users/hamzasaleem/Desktop/he-encryption-shelfi/palisade_shel
 # Special rule for the target rebuild_cache
 rebuild_cache:
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --cyan "Running CMake to regenerate build system..."
-	/usr/local/Cellar/cmake/3.16.2/bin/cmake -S$(CMAKE_SOURCE_DIR) -B$(CMAKE_BINARY_DIR)
+	/usr/bin/cmake -S$(CMAKE_SOURCE_DIR) -B$(CMAKE_BINARY_DIR)
 .PHONY : rebuild_cache
 
 # Special rule for the target rebuild_cache
@@ -69,8 +69,8 @@ rebuild_cache/fast: rebuild_cache
 
 # Special rule for the target edit_cache
 edit_cache:
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --cyan "Running CMake cache editor..."
-	/usr/local/Cellar/cmake/3.16.2/bin/ccmake -S$(CMAKE_SOURCE_DIR) -B$(CMAKE_BINARY_DIR)
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --cyan "No interactive CMake dialog available..."
+	/usr/bin/cmake -E echo No\ interactive\ CMake\ dialog\ available.
 .PHONY : edit_cache
 
 # Special rule for the target edit_cache
@@ -80,9 +80,9 @@ edit_cache/fast: edit_cache
 
 # The main all target
 all: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /Users/hamzasaleem/Desktop/he-encryption-shelfi/palisade_shelfi_interface/build/CMakeFiles /Users/hamzasaleem/Desktop/he-encryption-shelfi/palisade_shelfi_interface/build/CMakeFiles/progress.marks
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/parallels/Desktop/he-encryption-shelfi/palisade_shelfi_interface/build/CMakeFiles /home/parallels/Desktop/he-encryption-shelfi/palisade_shelfi_interface/build/CMakeFiles/progress.marks
 	$(MAKE) -f CMakeFiles/Makefile2 all
-	$(CMAKE_COMMAND) -E cmake_progress_start /Users/hamzasaleem/Desktop/he-encryption-shelfi/palisade_shelfi_interface/build/CMakeFiles 0
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/parallels/Desktop/he-encryption-shelfi/palisade_shelfi_interface/build/CMakeFiles 0
 .PHONY : all
 
 # The main clean target
@@ -111,44 +111,44 @@ depend:
 .PHONY : depend
 
 #=============================================================================
-# Target rules for targets named demo
+# Target rules for targets named test
 
 # Build rule for target.
-demo: cmake_check_build_system
-	$(MAKE) -f CMakeFiles/Makefile2 demo
-.PHONY : demo
+test: cmake_check_build_system
+	$(MAKE) -f CMakeFiles/Makefile2 test
+.PHONY : test
 
 # fast build rule for target.
-demo/fast:
-	$(MAKE) -f CMakeFiles/demo.dir/build.make CMakeFiles/demo.dir/build
-.PHONY : demo/fast
+test/fast:
+	$(MAKE) -f CMakeFiles/test.dir/build.make CMakeFiles/test.dir/build
+.PHONY : test/fast
 
-demo.o: demo.cpp.o
+simple-real-numbers.o: simple-real-numbers.cpp.o
 
-.PHONY : demo.o
+.PHONY : simple-real-numbers.o
 
 # target to build an object file
-demo.cpp.o:
-	$(MAKE) -f CMakeFiles/demo.dir/build.make CMakeFiles/demo.dir/demo.cpp.o
-.PHONY : demo.cpp.o
+simple-real-numbers.cpp.o:
+	$(MAKE) -f CMakeFiles/test.dir/build.make CMakeFiles/test.dir/simple-real-numbers.cpp.o
+.PHONY : simple-real-numbers.cpp.o
 
-demo.i: demo.cpp.i
+simple-real-numbers.i: simple-real-numbers.cpp.i
 
-.PHONY : demo.i
+.PHONY : simple-real-numbers.i
 
 # target to preprocess a source file
-demo.cpp.i:
-	$(MAKE) -f CMakeFiles/demo.dir/build.make CMakeFiles/demo.dir/demo.cpp.i
-.PHONY : demo.cpp.i
+simple-real-numbers.cpp.i:
+	$(MAKE) -f CMakeFiles/test.dir/build.make CMakeFiles/test.dir/simple-real-numbers.cpp.i
+.PHONY : simple-real-numbers.cpp.i
 
-demo.s: demo.cpp.s
+simple-real-numbers.s: simple-real-numbers.cpp.s
 
-.PHONY : demo.s
+.PHONY : simple-real-numbers.s
 
 # target to generate assembly for a file
-demo.cpp.s:
-	$(MAKE) -f CMakeFiles/demo.dir/build.make CMakeFiles/demo.dir/demo.cpp.s
-.PHONY : demo.cpp.s
+simple-real-numbers.cpp.s:
+	$(MAKE) -f CMakeFiles/test.dir/build.make CMakeFiles/test.dir/simple-real-numbers.cpp.s
+.PHONY : simple-real-numbers.cpp.s
 
 # Help Target
 help:
@@ -158,10 +158,10 @@ help:
 	@echo "... depend"
 	@echo "... rebuild_cache"
 	@echo "... edit_cache"
-	@echo "... demo"
-	@echo "... demo.o"
-	@echo "... demo.i"
-	@echo "... demo.s"
+	@echo "... test"
+	@echo "... simple-real-numbers.o"
+	@echo "... simple-real-numbers.i"
+	@echo "... simple-real-numbers.s"
 .PHONY : help
 
 
