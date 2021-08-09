@@ -35,6 +35,9 @@ pybind11_add_module(SHELFI_FHE src/main.cpp)
 # define (VERSION_INFO) here.
 target_compile_definitions(SHELFI_FHE PRIVATE VERSION_INFO=${EXAMPLE_VERSION_INFO})
 
+# Set relative path to CryptoParams directory.
+target_compile_definitions(SHELFI_FHE PRIVATE CRYPTO_PARAMS_DIR="${CMAKE_CURRENT_SOURCE_DIR}/CryptoParams/")
+
 # We need to adjust the prefix and the suffix of the target because by default the
 # generated pybind11 shared object has the OS distribution as part of its suffix.
 # Name target as `target_name` with ".so" extension.

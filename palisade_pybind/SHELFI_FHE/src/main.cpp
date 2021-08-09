@@ -33,40 +33,16 @@ namespace py = pybind11;
 
 
 
-
-PYBIND11_MAKE_OPAQUE(std::vector<float, std::allocator<float>>);
-using FloatVector = std::vector<float, std::allocator<float>>;
-
-PYBIND11_MAKE_OPAQUE(std::vector<int, std::allocator<int>>);
-using IntVector = std::vector<int, std::allocator<int>>;
-
-PYBIND11_MAKE_OPAQUE(std::vector<std::string, std::allocator<std::string>>);
-using StringList = std::vector<std::string, std::allocator<std::string>>;
-
-
-PYBIND11_MAKE_OPAQUE(std::vector<double, std::allocator<double>>);
-using DoubleVector = std::vector<double, std::allocator<double>>;
-
-PYBIND11_MAKE_OPAQUE(std::vector<complex<double>, std::allocator<complex<double>>>);
-using ComplexVector = std::vector<complex<double>, std::allocator<complex<double>>>;
-
-PYBIND11_MAKE_OPAQUE(std::vector<vector<double>, std::allocator<vector<double>>>);
-using VecVecDouble = std::vector<vector<double>, std::allocator<vector<double>>>;
-
-PYBIND11_MAKE_OPAQUE(std::vector<vector<complex<double>>, std::allocator<vector<complex<double>>>>);
-using VecVecComplex = std::vector<vector<complex<double>>, std::allocator<vector<complex<double>>>>;
-
-
-
-
-
-
 class FHE_Helper{
 
 	private:
 
+    // Using the cmake target compilation definition. This enables the placement of the
+    // CryptoParams directory relative to the working directory.
+	//const std::string DATAFOLDER = CRYPTO_PARAMS_DIR;
+
 	const std::string DATAFOLDER = "CryptoParams";
-	
+
 	string scheme;
 	usint batchSize;
 	usint scaleFactorBits;
@@ -210,11 +186,12 @@ class FHE_Helper{
 
 	}
 	
-	
+
 	py::bytes encrypt(py::array_t<double> data_array) {
 
 
-		auto size = data_array.size();
+		unsigned long int size = data_array.size();
+
 
 		auto learner_Data = data_array.data();
 
@@ -231,18 +208,18 @@ class FHE_Helper{
 		if (scheme == "ckks") {
 
 
-			if(size>(long unsigned int)batchSize){
+			if(size>(unsigned long int)batchSize){
 
 			    int j=0;
 
-			    for(long unsigned int i = 0; i < size; i += batchSize) {
+			    for(unsigned long int i = 0; i < size; i += batchSize) {
 
-					auto last = std::min((long)size, (long)i + batchSize);
+					unsigned long int last = std::min((long)size, (long)i + batchSize);
 
 					vector<double> batch;
 					batch.reserve(last-i+1);
 
-					for(long unsigned int j=i; j<last; j++){
+					for(unsigned long int j=i; j<last; j++){
 
 						batch.push_back(learner_Data[j]);
 
@@ -272,7 +249,7 @@ class FHE_Helper{
 
 				batch.reserve(size);
 
-				for(long unsigned int i = 0; i < size; i++) {
+				for(unsigned long int i = 0; i < size; i++) {
 
 					//float dat = py::float_(learner_Data[i]);
 					batch.push_back(py::float_(learner_Data[i])); 
@@ -322,6 +299,108 @@ class FHE_Helper{
 
 
 	}
+
+
+	/*py::bytes encrypt_list(py::list data_list_array, unsigned long int total_params) {
+
+
+		unsigned long int size = total_params;
+
+		vector<Ciphertext<DCRTPoly>> ciphertext_data((int)((size + batchSize) / batchSize));
+
+		
+		if (scheme == "ckks") {
+
+
+			int vec_index = 0;
+			int cipher_index=0;
+
+			vector<double> batch;
+			batch.reserve(batchSize);
+
+
+			for(unsigned long int i=0; i<data_list_array.size(); i++){
+
+				py::array_t<double> casted_array = py::cast<py::array>(data_list_array[i]);
+
+				unsigned long int arr_size = casted_array.size();
+
+				auto layer_data_req = casted_array.request();
+
+				double* layer_data = (double*) layer_data_req.ptr;
+
+				for(unsigned long int j=0; j<arr_size; j++){
+
+					if(vec_index<batchSize){
+
+						batch.push_back(py::float_(layer_data[vec_index++]));
+
+					}
+
+					else{
+
+						vec_index = 0;
+
+						Plaintext plaintext_data = cc->MakeCKKSPackedPlaintext(batch);
+						ciphertext_data[cipher_index++] = cc->Encrypt(pk, plaintext_data);
+
+						batch.clear();
+						batch.reserve(batchSize);
+
+					}
+
+
+				}
+
+			}
+
+			if(batch.size() > 0){
+
+				Plaintext plaintext_data = cc->MakeCKKSPackedPlaintext(batch);
+				ciphertext_data[cipher_index++] = cc->Encrypt(pk, plaintext_data);
+
+				batch.clear();
+
+			}
+
+
+
+		}
+
+		else {
+
+			std::cout << "Not supported!" << std::endl;
+			return "";
+
+		}
+
+		// end = std::chrono::system_clock::now();
+		// elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+		//std::cout <<"Encryption: "<< elapsed_time << " milliseconds"<<'\n';
+
+
+
+
+		//auto start = std::chrono::system_clock::now();
+
+		stringstream s;
+		const SerType::SERBINARY st;
+		Serial::Serialize(ciphertext_data, s, st);
+
+		//ciphertext_data.clear();
+
+		py::bytes res(s.str());
+
+
+		//auto end = std::chrono::system_clock::now();
+		//auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+		//std::cout <<"Serialization: "<< elapsed.count() << " milliseconds"<<'\n';
+
+
+		return res;
+
+
+	}*/
 
 
 	py::bytes computeWeightedAverage(py::list learners_Data, py::list scalingFactors) {
@@ -440,7 +519,7 @@ class FHE_Helper{
 
 	        vector<double> layer_data = pt->GetRealPackedValue();
 
-	        for(int j=0; j<layer_data.size(); j++){
+	        for(unsigned long int j=0; j<layer_data.size(); j++){
 
 	        	ptr3[m++] =  layer_data[j];
 
@@ -477,98 +556,12 @@ PYBIND11_MODULE(SHELFI_FHE, m) {
         .def(py::init<std::string &, usint, usint>())
         .def("load_cyrpto_params", &FHE_Helper::load_cyrpto_params)
         .def("encrypt", &FHE_Helper::encrypt)
+        //.def("encrypt_list", &FHE_Helper::encrypt_list)
         .def("decrypt", &FHE_Helper::decrypt)
         .def("computeWeightedAverage", &FHE_Helper::computeWeightedAverage)
         .def("genCryptoContextAndKeyGen", &FHE_Helper::genCryptoContextAndKeyGen);
 
 	
-
-    py::class_<std::vector<float>>(m, "FloatVector")
-    .def(py::init<>())
-    .def("clear", &std::vector<float>::clear)
-    .def("push_back", (void (FloatVector::*)(const float &)) &FloatVector::push_back)
-    .def("pop_back", &std::vector<float>::pop_back)
-    .def("__len__", [](const std::vector<float> &v) { return v.size(); })
-    .def("__iter__", [](std::vector<float> &v) {
-       return py::make_iterator(v.begin(), v.end());
-    }, py::keep_alive<0, 1>());
-
-    py::class_<std::vector<double>>(m, "DoubleVector")
-    .def(py::init<>())
-    .def("clear", &std::vector<double>::clear)
-    .def("push_back", (void (DoubleVector::*)(const double &)) &DoubleVector::push_back)
-    .def("pop_back", &std::vector<double>::pop_back)
-    .def("__len__", [](const std::vector<double> &v) { return v.size(); })
-    .def("__iter__", [](std::vector<double> &v) {
-       return py::make_iterator(v.begin(), v.end());
-    }, py::keep_alive<0, 1>());
-
-    py::class_<std::vector<complex<double>>>(m, "ComplexVector")
-    .def(py::init<>())
-    .def("clear", &std::vector<complex<double>>::clear)
-    .def("push_back", (void (ComplexVector::*)(const complex<double> &)) &ComplexVector::push_back)
-    .def("pop_back", &std::vector<complex<double>>::pop_back)
-    .def("__len__", [](const std::vector<complex<double>> &v) { return v.size(); })
-    .def("__iter__", [](std::vector<complex<double>> &v) {
-       return py::make_iterator(v.begin(), v.end());
-    }, py::keep_alive<0, 1>());
-
-
-    py::class_<std::vector<int>>(m, "IntVector")
-    .def(py::init<>())
-    .def("clear", &std::vector<int>::clear)
-    .def("pop_back", &std::vector<int>::pop_back)
-    .def("push_back", (void (IntVector::*)(const int &)) &IntVector::push_back)
-    .def("__len__", [](const std::vector<int> &v) { return v.size(); })
-    .def("__iter__", [](std::vector<int> &v) {
-       return py::make_iterator(v.begin(), v.end());
-    }, py::keep_alive<0, 1>()); /* Keep vector alive while iterator is used */
-
-
-
-    py::class_<StringList>(m, "StringList")
-        .def(py::init<>())
-        .def("pop_back", &StringList::pop_back)
-        .def("clear", &StringList::clear)
-        // There are multiple versions of push_back(), etc. Select the right ones. 
-        .def("push_back", (void (StringList::*)(const std::string &)) &StringList::push_back)
-        .def("back", (std::string &(StringList::*)()) &StringList::back)
-        .def("__len__", [](const StringList &v) { return v.size(); })
-        .def("__iter__", [](StringList &v) {
-           return py::make_iterator(v.begin(), v.end());
-        }, py::keep_alive<0, 1>());
-
-
-    py::class_<VecVecDouble>(m, "VecVecDouble")
-        .def(py::init<>())
-        .def("pop_back", &VecVecDouble::pop_back)
-        .def("clear", &VecVecDouble::clear)
-        /* There are multiple versions of push_back(), etc. Select the right ones. */
-        .def("push_back", (void (VecVecDouble::*)(const vector<double> &)) &VecVecDouble::push_back)
-        .def("back", (vector<double> &(VecVecDouble::*)()) &VecVecDouble::back)
-        .def("__len__", [](const VecVecDouble &v) { return v.size(); })
-        .def("__iter__", [](VecVecDouble &v) {
-           return py::make_iterator(v.begin(), v.end());
-        }, py::keep_alive<0, 1>());
-
-
-    py::class_<VecVecComplex>(m, "VecVecComplex")
-        .def(py::init<>())
-        .def("pop_back", &VecVecComplex::pop_back)
-        .def("clear", &VecVecComplex::clear)
-
-        // There are multiple versions of push_back(), etc. Select the right ones. 
-        .def("push_back", (void (VecVecComplex::*)(const vector<complex<double>> &)) &VecVecComplex::push_back)
-        .def("back", (vector<complex<double>> &(VecVecComplex::*)()) &VecVecComplex::back)
-        .def("__len__", [](const VecVecComplex &v) { return v.size(); })
-        .def("__iter__", [](VecVecComplex &v) {
-           return py::make_iterator(v.begin(), v.end());
-        }, py::keep_alive<0, 1>());
-
-
-    
-
-
 
     m.doc() = R"pbdoc(
         Pybind11 example plugin
@@ -577,26 +570,6 @@ PYBIND11_MODULE(SHELFI_FHE, m) {
         .. autosummary::
            :toctree: _generate
     )pbdoc";
-
-    /*m.def("genCryptoContextAndKeyGen", &genCryptoContextAndKeyGen, R"pbdoc(
-        Add two numbers
-    )pbdoc");
-
-
-    m.def("encryption", &encryption, R"pbdoc(
-        Encrypts a list of list containing model params
-    )pbdoc");
-
-    m.def("decryption", &decryption, R"pbdoc(
-        Decrypts a list of list containing model params
-    )pbdoc");
-
-
-
-     m.def("computeWeightedAverage", &computeWeightedAverage, R"pbdoc(
-        compute Weighted Average
-    )pbdoc");
-*/
 
    
 
