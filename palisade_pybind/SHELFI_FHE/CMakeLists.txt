@@ -11,6 +11,7 @@ project(SHELFI_FHE)
 set(CMAKE_CXX_STANDARD 11)
 
 find_package(Palisade REQUIRED)
+find_package(OpenMP)
 
 set(CMAKE_CXX_FLAGS ${PALISADE_CXX_FLAGS})
 set(CMAKE_EXE_LINKER_FLAGS ${PALISADE_EXE_LINKER_FLAGS})
@@ -36,8 +37,14 @@ pybind11_add_module(SHELFI_FHE MODULE src/main.cpp)
 # define (VERSION_INFO) here.
 target_compile_definitions(SHELFI_FHE PRIVATE VERSION_INFO=${EXAMPLE_VERSION_INFO})
 
+
+target_compile_options(SHELFI_FHE PRIVATE -Wall ${OpenMP_CXX_FLAGS})
+target_link_libraries(SHELFI_FHE PRIVATE ${OpenMP_CXX_FLAGS})
+
+
 # Set relative path to CryptoParams directory.
 target_compile_definitions(SHELFI_FHE PRIVATE CRYPTO_PARAMS_DIR="${CMAKE_CURRENT_SOURCE_DIR}/resources/cryptoparams")
+#target_compile_definitions(SHELFI_FHE PRIVATE CRYPTO_PARAMS_DIR="../resources/cryptoparams")
 
 # We need to include the install command in order for the foreign_cc cmake bazel rule to work.
 # Pay attention to the fact that for normal uses, the generated binary does not need to be installed system-wise.

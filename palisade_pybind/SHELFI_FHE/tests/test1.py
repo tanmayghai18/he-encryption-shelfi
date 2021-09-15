@@ -5,7 +5,7 @@ import numpy as np
 
 
 
-data_dimesions = 10000
+data_dimesions = 50000
 
 scalingFactors = [0.5,0.2,0.3]
 
@@ -97,6 +97,7 @@ for i in range(len(learner1_data_actual)):
 #printing result
 
 j = 0
+
 for i in (dec_res):
 		print("computed: "+str(i)+" "+"actual: "+str(result[j]))
 		j = j+1

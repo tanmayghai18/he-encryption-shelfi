@@ -12,6 +12,8 @@
 #include <string>
 
 #include <pybind11/numpy.h>
+#include <omp.h>
+
 
 using namespace std;
 using namespace lbcrypto;
@@ -164,44 +166,43 @@ public:
 
   py::bytes encrypt(py::array_t<double> data_array) {
 
+    //double elapsed_time_encryption = 0.0;
+    //double elapsed_time_serialize = 0.0;
+
     unsigned long int size = data_array.size();
-
     auto learner_Data = data_array.data();
-
-    // double elapsed_time = 0.0;
 
     vector<Ciphertext<DCRTPoly>> ciphertext_data(
         (int)((size + batchSize) / batchSize));
 
-    // ciphertext_data.reserve((int)((size + batchSize) / batchSize));
+
+    //auto start_enc = omp_get_wtime();
 
     if (scheme == "ckks") {
 
       if (size > (unsigned long int)batchSize) {
 
-        int j = 0;
+        //int j = 0;
 
+        #pragma omp parallel for
         for (unsigned long int i = 0; i < size; i += batchSize) {
+
 
           unsigned long int last = std::min((long)size, (long)i + batchSize);
 
           vector<double> batch;
           batch.reserve(last - i + 1);
 
+
           for (unsigned long int j = i; j < last; j++) {
 
             batch.push_back(learner_Data[j]);
           }
 
-          // auto start = std::chrono::system_clock::now();
 
           Plaintext plaintext_data = cc->MakeCKKSPackedPlaintext(batch);
-          ciphertext_data[j++] = cc->Encrypt(pk, plaintext_data);
+          ciphertext_data[(int)(i/batchSize)] = cc->Encrypt(pk, plaintext_data);
 
-          // auto end = std::chrono::system_clock::now();
-
-          // elapsed_time+=std::chrono::duration_cast<std::chrono::milliseconds>(end
-          // - start).count();
 
           batch.clear();
         }
@@ -232,144 +233,48 @@ public:
       return "";
     }
 
-    // end = std::chrono::system_clock::now();
-    // elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end -
-    // start);
-    // std::cout <<"Encryption: "<< elapsed_time << " milliseconds"<<'\n';
 
-    // auto start = std::chrono::system_clock::now();
+    //auto end_enc = omp_get_wtime();
+
+    //elapsed_time_encryption = end_enc - start_enc;
+
+
+
+    //auto start_serialize = omp_get_wtime();
 
     stringstream s;
     const SerType::SERBINARY st;
     Serial::Serialize(ciphertext_data, s, st);
 
-    // ciphertext_data.clear();
 
     py::bytes res(s.str());
 
-    // auto end = std::chrono::system_clock::now();
-    // auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end
-    // - start); std::cout <<"Serialization: "<< elapsed.count() << "
-    // milliseconds"<<'\n';
+    //auto end_serialize = omp_get_wtime();
+
+    //elapsed_time_serialize = end_serialize - start_serialize;
+
+
+
+    //std::cout <<"Encryption Time: "<< elapsed_time_encryption*1000 << " milliseconds"<<'\n';
+    //std::cout <<"Serialization Time: "<< elapsed_time_serialize*1000 << " milliseconds"<<'\n';
 
     return res;
   }
 
-  /*py::bytes encrypt_list(py::list data_list_array, unsigned long int
-  total_params) {
-
-
-          unsigned long int size = total_params;
-
-          vector<Ciphertext<DCRTPoly>> ciphertext_data((int)((size + batchSize)
-  / batchSize));
-
-
-          if (scheme == "ckks") {
-
-
-                  int vec_index = 0;
-                  int cipher_index=0;
-
-                  vector<double> batch;
-                  batch.reserve(batchSize);
-
-
-                  for(unsigned long int i=0; i<data_list_array.size(); i++){
-
-                          py::array_t<double> casted_array =
-  py::cast<py::array>(data_list_array[i]);
-
-                          unsigned long int arr_size = casted_array.size();
-
-                          auto layer_data_req = casted_array.request();
-
-                          double* layer_data = (double*) layer_data_req.ptr;
-
-                          for(unsigned long int j=0; j<arr_size; j++){
-
-                                  if(vec_index<batchSize){
-
-                                          batch.push_back(py::float_(layer_data[vec_index++]));
-
-                                  }
-
-                                  else{
-
-                                          vec_index = 0;
-
-                                          Plaintext plaintext_data =
-  cc->MakeCKKSPackedPlaintext(batch); ciphertext_data[cipher_index++] =
-  cc->Encrypt(pk, plaintext_data);
-
-                                          batch.clear();
-                                          batch.reserve(batchSize);
-
-                                  }
-
-
-                          }
-
-                  }
-
-                  if(batch.size() > 0){
-
-                          Plaintext plaintext_data =
-  cc->MakeCKKSPackedPlaintext(batch); ciphertext_data[cipher_index++] =
-  cc->Encrypt(pk, plaintext_data);
-
-                          batch.clear();
-
-                  }
-
-
-
-          }
-
-          else {
-
-                  std::cout << "Not supported!" << std::endl;
-                  return "";
-
-          }
-
-          // end = std::chrono::system_clock::now();
-          // elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end
-  - start);
-          //std::cout <<"Encryption: "<< elapsed_time << " milliseconds"<<'\n';
-
-
-
-
-          //auto start = std::chrono::system_clock::now();
-
-          stringstream s;
-          const SerType::SERBINARY st;
-          Serial::Serialize(ciphertext_data, s, st);
-
-          //ciphertext_data.clear();
-
-          py::bytes res(s.str());
-
-
-          //auto end = std::chrono::system_clock::now();
-          //auto elapsed =
-  std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
-          //std::cout <<"Serialization: "<< elapsed.count() << "
-  milliseconds"<<'\n';
-
-
-          return res;
-
-
-  }*/
+  
 
   py::bytes computeWeightedAverage(py::list learners_Data,
                                    py::list scalingFactors) {
 
+    //double elapsed_time_deserialize = 0.0;
+    //double elapsed_time_pwa = 0.0;
+    //double elapsed_time_serialize = 0.0;
+
+
     if (scheme != "ckks") {
       std::cout << "Not supported!" << std::endl;
     }
+
 
     if (learners_Data.size() != scalingFactors.size()) {
       cout << "Error: learners_Data and scalingFactors size mismatch" << endl;
@@ -382,12 +287,22 @@ public:
 
     for (unsigned long int i = 0; i < learners_Data.size(); i++) {
 
+      //auto start_deserialize = omp_get_wtime();
+
       string dat = std::string(py::str(learners_Data[i]));
 
       stringstream ss(dat);
       vector<Ciphertext<DCRTPoly>> learner_ciphertext;
 
       Serial::Deserialize(learner_ciphertext, ss, st);
+
+      //auto end_deserialize = omp_get_wtime();
+
+
+      //elapsed_time_deserialize+=end_deserialize - start_deserialize; 
+
+
+      //auto start_pwa = omp_get_wtime();
 
       for (unsigned long int j = 0; j < learner_ciphertext.size(); j++) {
 
@@ -410,27 +325,57 @@ public:
         }
       }
 
+      //auto end_pwa = omp_get_wtime();
+
+      //elapsed_time_pwa+=end_pwa - start_pwa; 
+
       learner_ciphertext.clear();
     }
 
+
+    //auto start_serialize = std::chrono::system_clock::now();
+
     stringstream ss;
     Serial::Serialize(result_ciphertext, ss, st);
+    py::bytes res(ss.str());
+
+    //auto end_serialize = std::chrono::system_clock::now();
+
+    //elapsed_time_serialize+=std::chrono::duration_cast<std::chrono::milliseconds>(end_serialize
+      //- start_serialize).count(); 
+
+
+    //std::cout <<"Deserialization time: "<< elapsed_time_deserialize*1000 << " milliseconds"<<'\n';
+    //std::cout <<"PWA Time: "<< elapsed_time_pwa*1000 << " milliseconds"<<'\n';
+    //std::cout <<"Serialization Time: "<< elapsed_time_serialize << " milliseconds"<<'\n';
+
+
 
     result_ciphertext.clear();
 
-    return py::bytes(ss.str());
+    return res;
   }
 
   py::array_t<double> decrypt(string learner_Data,
                               unsigned long int data_dimesions) {
 
+    //double elapsed_time_deserialize = 0.0;
+    //double elapsed_time_decrypt = 0.0;
+
+
+    //auto start_deserialize = std::chrono::system_clock::now();
     const SerType::SERBINARY st;
     stringstream ss(learner_Data);
 
     vector<Ciphertext<DCRTPoly>> learner_ciphertext;
     Serial::Deserialize(learner_ciphertext, ss, st);
 
-    // py::array_t<double> result(data_dimesions);
+    //auto end_deserialize = std::chrono::system_clock::now();
+
+    //elapsed_time_deserialize+=std::chrono::duration_cast<std::chrono::milliseconds>(end_deserialize
+      //- start_deserialize).count(); 
+
+
 
     auto result = py::array_t<double>(data_dimesions);
 
@@ -438,11 +383,12 @@ public:
 
     double *ptr3 = static_cast<double *>(buf3.ptr);
 
-    // result.reserve(data_dimesions);
 
-    size_t m = 0;
+    //auto start_decrypt = omp_get_wtime();
 
+    #pragma omp parallel for
     for (unsigned long int i = 0; i < learner_ciphertext.size(); i++) {
+
 
       Plaintext pt;
       cc->Decrypt(sk, learner_ciphertext[i], &pt);
@@ -463,15 +409,23 @@ public:
 
       vector<double> layer_data = pt->GetRealPackedValue();
 
+      int m = i*batchSize;
+
       for (unsigned long int j = 0; j < layer_data.size(); j++) {
 
         ptr3[m++] = layer_data[j];
       }
 
-      // cout<<endl;
-
-      // result.insert(result.end(), layer_data.begin(), layer_data.end());
+      
     }
+
+    //auto end_decrypt = omp_get_wtime();
+
+    //elapsed_time_decrypt+=end_decrypt - start_decrypt; 
+
+    //std::cout <<"Deserialization time: "<< elapsed_time_deserialize<< " milliseconds"<<'\n';
+    //std::cout <<"Decryption Time: "<< elapsed_time_decrypt *1000<< " milliseconds"<<'\n';
+
 
     learner_ciphertext.clear();
 
