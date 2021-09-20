@@ -31,40 +31,39 @@ namespace py = pybind11;
 class FHE_Helper {
 
 private:
-  // Using the cmake target compilation definition. This enables the placement
-  // of the CryptoParams directory relative to the working directory.
-  const std::string DATAFOLDER = CRYPTO_PARAMS_DIR;
 
   string scheme;
   usint batchSize;
   usint scaleFactorBits;
+  std::string cryptodir;
 
   CryptoContext<DCRTPoly> cc;
   LPPublicKey<DCRTPoly> pk;
   LPPrivateKey<DCRTPoly> sk;
 
 public:
-  FHE_Helper(string scheme, usint batchSize, usint scaleFactorBits) {
+  FHE_Helper(string scheme, usint batchSize, usint scaleFactorBits, string cryptodir = "") {
 
     this->scheme = scheme;
     this->batchSize = batchSize;
     this->scaleFactorBits = scaleFactorBits;
+    this->cryptodir = cryptodir;
   }
 
-  void load_cyrpto_params() {
+  void load_crypto_params() {
 
-    if (!Serial::DeserializeFromFile(DATAFOLDER + "/cryptocontext.txt", cc,
+    if (!Serial::DeserializeFromFile(cryptodir + "/cryptocontext.txt", cc,
                                      SerType::BINARY)) {
       std::cout << "Could not read serialization from "
-                << DATAFOLDER + "/cryptocontext.txt" << std::endl;
+                << cryptodir + "/cryptocontext.txt" << std::endl;
     }
 
-    if (!Serial::DeserializeFromFile(DATAFOLDER + "/key-public.txt", pk,
+    if (!Serial::DeserializeFromFile(cryptodir + "/key-public.txt", pk,
                                      SerType::BINARY)) {
       std::cout << "Could not read public key" << std::endl;
     }
 
-    if (Serial::DeserializeFromFile(DATAFOLDER + "/key-private.txt", sk,
+    if (Serial::DeserializeFromFile(cryptodir + "/key-private.txt", sk,
                                     SerType::BINARY) == false) {
       std::cerr << "Could not read secret key" << std::endl;
     }
@@ -101,7 +100,7 @@ public:
     std::cout << "\nThe cryptocontext has been generated." << std::endl;
 
     // Serialize cryptocontext
-    if (!Serial::SerializeToFile(DATAFOLDER + "/cryptocontext.txt",
+    if (!Serial::SerializeToFile(cryptodir + "/cryptocontext.txt",
                                  cryptoContext, SerType::BINARY)) {
       std::cerr << "Error writing serialization of the crypto context to "
                    "cryptocontext.txt"
@@ -119,7 +118,7 @@ public:
     std::cout << "The key pair has been generated." << std::endl;
 
     // Serialize the public key
-    if (!Serial::SerializeToFile(DATAFOLDER + "/key-public.txt",
+    if (!Serial::SerializeToFile(cryptodir + "/key-public.txt",
                                  keyPair.publicKey, SerType::BINARY)) {
       std::cerr << "Error writing serialization of public key to key-public.txt"
                 << std::endl;
@@ -128,7 +127,7 @@ public:
     std::cout << "The public key has been serialized." << std::endl;
 
     // Serialize the secret key
-    if (!Serial::SerializeToFile(DATAFOLDER + "/key-private.txt",
+    if (!Serial::SerializeToFile(cryptodir + "/key-private.txt",
                                  keyPair.secretKey, SerType::BINARY)) {
       std::cerr
           << "Error writing serialization of private key to key-private.txt"
@@ -144,7 +143,7 @@ public:
 
     // Serialize the relinearization (evaluation) key for homomorphic
     // multiplication
-    std::ofstream emkeyfile(DATAFOLDER + "/" + "key-eval-mult.txt",
+    std::ofstream emkeyfile(cryptodir + "/" + "key-eval-mult.txt",
                             std::ios::out | std::ios::binary);
     if (emkeyfile.is_open()) {
       if (cryptoContext->SerializeEvalMultKey(emkeyfile, SerType::BINARY) ==
@@ -435,11 +434,12 @@ public:
 
 PYBIND11_MODULE(SHELFI_FHE, m) {
 
-  py::class_<FHE_Helper>(m, "FHE_Helper")
-      .def(py::init<std::string &, usint, usint>())
-      .def("load_cyrpto_params", &FHE_Helper::load_cyrpto_params)
+py::class_<FHE_Helper>(m, "FHE_Helper")
+        .def(py::init<std::string &, usint, usint, std::string &>(),
+                py::arg("scheme") = py::str("ckks"), py::arg("batchSize") = 8192,
+                py::arg("scaleFactorBits") = 52, py::arg("cryptodir") = py::str("../resources/cryptoparams"))
+      .def("load_crypto_params", &FHE_Helper::load_crypto_params)
       .def("encrypt", &FHE_Helper::encrypt)
-      //.def("encrypt_list", &FHE_Helper::encrypt_list)
       .def("decrypt", &FHE_Helper::decrypt)
       .def("computeWeightedAverage", &FHE_Helper::computeWeightedAverage)
       .def("genCryptoContextAndKeyGen", &FHE_Helper::genCryptoContextAndKeyGen);

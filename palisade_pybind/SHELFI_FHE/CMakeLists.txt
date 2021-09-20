@@ -41,11 +41,6 @@ target_compile_definitions(SHELFI_FHE PRIVATE VERSION_INFO=${EXAMPLE_VERSION_INF
 target_compile_options(SHELFI_FHE PRIVATE -Wall ${OpenMP_CXX_FLAGS})
 target_link_libraries(SHELFI_FHE PRIVATE ${OpenMP_CXX_FLAGS})
 
-
-# Set relative path to CryptoParams directory.
-target_compile_definitions(SHELFI_FHE PRIVATE CRYPTO_PARAMS_DIR="${CMAKE_CURRENT_SOURCE_DIR}/resources/cryptoparams")
-#target_compile_definitions(SHELFI_FHE PRIVATE CRYPTO_PARAMS_DIR="../resources/cryptoparams")
-
 # We need to include the install command in order for the foreign_cc cmake bazel rule to work.
 # Pay attention to the fact that for normal uses, the generated binary does not need to be installed system-wise.
 install(TARGETS SHELFI_FHE LIBRARY DESTINATION lib)

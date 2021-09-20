@@ -141,7 +141,7 @@ def main(total_learners, total_params):
     performance_aggregator = PerformanceStatsAggregator()
     wrapper = PseudoFHEFederationWrapper()
     FHE_helper = m.FHE_Helper("ckks", 8192, 52)
-    FHE_helper.load_cyrpto_params()
+    FHE_helper.load_crypto_params()
 
     print("Compute learners scaling factors (probabilities).")
     probabilities = performance_aggregator.run(wrapper.get_scaling_probabilities,
