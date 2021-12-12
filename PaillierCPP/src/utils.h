@@ -12,30 +12,46 @@
 #include <sstream>
 #include <limits.h>
 #include <vector>
+#include <stdio.h>
+#include <string.h>
+
+using namespace std;
 
 
-const int modulusbits = 3072;
-const int noOfParams = 1000000;
-const int totalLearners = 5;
+extern int modulusbits;
+extern int num_rep_bits;
+extern int precision_bits;
 
-const int num_rep_bits = 32; //number of bits used to represent numbers
-const int nums_to_pack = 64; //numbers packed in 1 plaintext
+extern int noOfParams;
+extern int totalLearners;
 
 
-//std::string learner_params_folder = "enigma_dataset/learners_flattened/";
-//std::string learner_params_files[totalLearners] = {"l1.npz", "l2.npz", "l3.npz", "l4.npz", "l5.npz", "l6.npz", "l7.npz", "l8.npz" };
+
+
+//const int noOfParams = 1000;
+//const int totalLearners = 5;
+
+//number of bits used to represent numbers
+// 13 bits for precision, 3 bits for range, 1 bit for sign
+//const int num_rep_bits = 17; 
+//const int precision_bits = 13;
+//const int nums_to_pack = 64; //numbers packed in 1 plaintext
+
+//const int pad_zeros = totalLearners - 1;
+
+
+void init_params(int learners, int mod_bits = 2048, int num_bits = 17, int prec_bits = 13);
+
 
 const paillier_get_rand_t get_rand = &paillier_get_rand_devrandom;
 
-
-paillier_plaintext_t** createParamsArray();
-paillier_plaintext_t**  paramsArrayfromVector(std::vector<std::string> params);
-void initializeLearners(paillier_plaintext_t*** learners_plaintext);
-
-paillier_ciphertext_t** encryptParams(paillier_plaintext_t** plaintext_arr, int size, paillier_pubkey_t* public_key);
-paillier_plaintext_t** decryptParams(paillier_ciphertext_t** ciphertext_arr, int size, paillier_pubkey_t* public_key, paillier_prvkey_t* private_key);
-void calculate_homomorphic_sum(paillier_ciphertext_t** ciphertext_result, paillier_ciphertext_t*** ciphertext_arr, int size, int noOfLearners, paillier_pubkey_t* public_key);
+void scaleUpParams(const vector<double>& params, vector<unsigned long int>& scaled_params);
+void scaleDownParams(vector<unsigned long int>& scaled_params, vector<double>& params);
+void clip(std::vector<unsigned long int>& params, unsigned long int threshold);
+void pack_params(const std::vector<unsigned long int>& params, std::vector<std::string>& packed_params);
+void unpack_params(std::vector<std::string>& packed_params, std::vector<unsigned long int>& params);
 
 
-std::vector<std::string> pack_params(const std::vector<unsigned int>& params);
-std::vector<unsigned int> unpack_params(std::vector<std::string>& packed_params);
+string encryptParams(const std::vector<double>& params, paillier_pubkey_t* public_key);
+std::vector<double> decryptParams(string ciphertext_arr, paillier_pubkey_t* public_key, paillier_prvkey_t* private_key, int params);
+string calculate_homomorphic_sum(std::vector<string>& learner_params, paillier_pubkey_t* public_key, paillier_prvkey_t* private_key);

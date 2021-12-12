@@ -1,232 +1,223 @@
 #include "utils.h"
 
+#include "cryptopp/cryptlib.h"
+#include "cryptopp/osrng.h"
+#include <cryptopp/rdrand.h>
+using namespace CryptoPP;
+
+
+int modulusbits;
+int num_rep_bits;
+int precision_bits;
+
+int noOfParams;
+int totalLearners;
 
 
 
-paillier_plaintext_t** createParamsArray(){
+void init_params(int learners, int mod_bits, int num_bits, int prec_bits){
 
-	paillier_plaintext_t** weights = (paillier_plaintext_t**) malloc(noOfParams * sizeof(paillier_plaintext_t*));
-
-	srand(time(NULL));
-
-	//#pragma omp parallel for
-    for(int i=0; i<noOfParams; i++){
-    	weights[i] = paillier_plaintext_from_ui(rand());
-    }
-
-	return weights;
-
-}
-
-
-paillier_plaintext_t**  paramsArrayfromVector(std::vector<std::string> params){
-
-
-	paillier_plaintext_t** weights = (paillier_plaintext_t**) malloc(params.size() * sizeof(paillier_plaintext_t*));
-
-
-	//#pragma omp parallel for
-    for(int i=0; i<params.size(); i++){
-
-    	weights[i] = paillier_plaintext_from_str( const_cast<char*>(params[i].c_str()));
-
-    }
-
-	return weights;
-
-
-}
-
-
-void initializeLearners(paillier_plaintext_t*** learners_plaintext){
-
-
-	for(int i=0; i<totalLearners; i++){
-
-		learners_plaintext[i] = createParamsArray();
-
-	}
-
-}
-
-paillier_ciphertext_t** encryptParams(paillier_plaintext_t** plaintext_arr, int size, paillier_pubkey_t* public_key){
-
-	paillier_ciphertext_t** ciphertext_arr = (paillier_ciphertext_t**) malloc(size * sizeof(paillier_ciphertext_t*));
-
+	modulusbits = mod_bits;
+	num_rep_bits = num_bits;
+	precision_bits = prec_bits;
 	
-	for(int i=0; i<size; i++){
-
-		ciphertext_arr[i] = paillier_enc(NULL, public_key, plaintext_arr[i], get_rand);
-
-	}
-
-	return ciphertext_arr;
-
-}
-
-
-paillier_plaintext_t** decryptParams(paillier_ciphertext_t** ciphertext_arr, int size, paillier_pubkey_t* public_key, paillier_prvkey_t* private_key){
-
-
-	paillier_plaintext_t** plaintext_arr = (paillier_plaintext_t**) malloc(size * sizeof(paillier_plaintext_t*));
-
-	#pragma omp parallel for 
-	for(int i=0; i<size; i++){
-
-		plaintext_arr[i] = paillier_dec(NULL, public_key, private_key, ciphertext_arr[i]);
-
-	}
-
-	return plaintext_arr;
-
-}
-
-
-void calculate_homomorphic_sum(paillier_ciphertext_t** ciphertext_result, paillier_ciphertext_t*** ciphertext_arr, int size, int noOfLearners, paillier_pubkey_t* public_key){
-
-	#pragma omp parallel for 
-	for(int i=0; i<size; i++){
-
-		ciphertext_result[i] = ciphertext_arr[0][i];
-
-		for(int j=0; j<noOfLearners-1; j++){
-
-			paillier_mul(public_key, ciphertext_result[i], ciphertext_result[i], ciphertext_arr[j+1][i]);
-
-		}
-
-	}
-
-}
-
-
-std::vector<std::string> pack_params(const std::vector<unsigned int>& params){
-
-	int params_size = params.size();
+	totalLearners = learners;
 	
 
-	int packed_params_size = ceil((float)params.size()/(float)nums_to_pack);
+}
 
-	std::vector<std::string> packed_params(packed_params_size, "");
+
+
+void scaleUpParams(const vector<double>& params, vector<unsigned long int>& scaled_params){
+
+	unsigned long int scale = pow(2, precision_bits);
+	unsigned long int threshold = pow(2,num_rep_bits-1); 
+
+	scaled_params.reserve(params.size());
+
+
+	//scale up to keep precision bits
+	for(int i=0; i<params.size(); i++){
+
+		scaled_params.push_back((unsigned long int) (params[i] * scale) );
+
+	}
+
+
+	clip(scaled_params, threshold);
+
+
+	for(int i=0; i<params.size(); i++){
+
+		//changes all numbers to positive in the range 0-2^(num_rep_bits) - 1
+		scaled_params[i] = scaled_params[i]+threshold;
+
+	}
+
+
+}
+
+
+void scaleDownParams(vector<unsigned long int>& scaled_params, vector<double>& params){
+
+	params.reserve(scaled_params.size());
+
+	double threshold = pow(2,num_rep_bits-1);
+	double scale = pow(2, precision_bits);
+
+
+	for(int i=0; i<scaled_params.size(); i++){
+
+		params.push_back(scaled_params[i]);
+
+		params[i] = (params[i] - (totalLearners*threshold))/scale;
+
+
+	}
+
+
+}
+
+
+
+void pack_params(const std::vector<unsigned long int>& params, std::vector<std::string>& packed_params){
+
+
+	int pad_zeros = totalLearners - 1;
+
+	
+
+	const unsigned int params_size =  params.size();
+
+	int bytes_to_rep_num = PAILLIER_BITS_TO_BYTES(num_rep_bits); 
+
+	//determining how many zero bytes to pad to account for overflow during sum
+	int extra_padding_bits = pad_zeros - ((bytes_to_rep_num*8) - num_rep_bits);
+	int extra_bytes_to_pad = 0;
+	if(extra_padding_bits > 0){
+
+		extra_bytes_to_pad = PAILLIER_BITS_TO_BYTES(extra_padding_bits);
+	} 
+
+
+	int total_size_num = bytes_to_rep_num + extra_bytes_to_pad;
+	int nums_to_pack = (modulusbits/8)/total_size_num;
+	int packed_params_size = ceil((float)params_size/(float)nums_to_pack);
+	packed_params.resize(packed_params_size, "");
+
 
 	int count_params = 0;
-	int count_packed = 0;
+
+	//starting byte index to copy the number from
+	int num_start_byte = bytes_to_rep_num -1;
+	if(num_start_byte> sizeof(unsigned long int)-1){
+		cout<<"Error: Number representation greater than unsigned long int."<<endl;
+		return;
+	}
+
+	unsigned long int zero_rep = 0;
+	char* num_ptr;
 
 
-	while(count_params < params_size){
+	for(int i=0; i<packed_params_size; i++){
 
-		for(int i=0; i<nums_to_pack; i++){
+		packed_params[i].reserve(modulusbits/8);
 
-			std::string bin_rep = "";
+		for(int j=0; j<nums_to_pack; j++){
 
 
-			if(count_params < params_size){
+			for(int k=0; k<extra_bytes_to_pad; k++){
 
-				bin_rep = std::bitset<num_rep_bits>(params[count_params]).to_string();
+				packed_params[i]+= (char) 0;
+				
+			}
+
+
+			if(count_params<params.size()){
+
+				num_ptr = (char*)& params[count_params++];
 
 			}
 			else{
 
-				bin_rep = std::bitset<num_rep_bits>(0).to_string();
+				num_ptr = (char*)& zero_rep;
 			}
 
-			packed_params[count_packed] = bin_rep.append(packed_params[count_packed]);
-			count_params+=1;
+
+			int start_index = num_start_byte;
+
+			while(start_index>=0){
+
+				packed_params[i]+= num_ptr[start_index--];
+			}
+
 
 		}
 
-		count_packed+=1;
 
 	}
-
-
-	for(int i=0; i<packed_params.size(); i++){
-
-		std::stringstream sstream(packed_params[i]);
-		std::string output="";
-
-
-		while(sstream.good()){
-
-			//std::cout<<"good"<<std::endl;
-
-			std::bitset<8> bits;
-			sstream >> bits;
-			char c = char(bits.to_ulong());
-			output += c;
-
-    	}
-
-    	packed_params[i] = output;
-
-	}
-
-
-	return packed_params;
 
 
 }
 
 
-std::vector<unsigned int> unpack_params(std::vector<std::string>& packed_params){
+void unpack_params(std::vector<std::string>& packed_params, std::vector<unsigned long int>& params){
+
+
+	int pad_zeros = totalLearners - 1;
+
 
 	int packed_params_size = packed_params.size();
 
-	std::vector<unsigned int> params;
-
-	int count_params = 0;
-	int count_packed = 0;
+	int bytes_to_rep_num = PAILLIER_BITS_TO_BYTES(num_rep_bits); 
 
 
-	while(count_packed < packed_params_size){
+	//determining how many zero bytes to pad to account for overflow during sum
+	int extra_padding_bits = pad_zeros - ((bytes_to_rep_num*8) - num_rep_bits);
+	int extra_bytes_to_pad = 0;
+	if(extra_padding_bits > 0){
 
-		std::string bin_rep = packed_params[count_packed];
+		extra_bytes_to_pad = PAILLIER_BITS_TO_BYTES(extra_padding_bits);
+	} 
 
-		//std::cout<<"bin_rep: "<<bin_rep<<std::endl;
+	int total_size_num = bytes_to_rep_num + extra_bytes_to_pad;
 
-		int start = bin_rep.length() - num_rep_bits;
-
-		std::cout<<"start: "<<std::to_string(start)<<std::endl;
-
-
-        for(int i=0; i<nums_to_pack; i++){
-
-        	if (count_params < noOfParams){
-
-        		unsigned int val = (unsigned int)(std::bitset<num_rep_bits>(bin_rep.substr(start, num_rep_bits)).to_ulong());
-        		std::cout<<bin_rep.substr(start, num_rep_bits)<<std::endl;
-        		std::cout<<std::to_string(val)<<std::endl;
-
-
-        		params.push_back(val);
-
-        	}
-
-        	else{
-        		break;
-        	}
-
-        	start = start - num_rep_bits;
-
-        	if(start < 0){
-                start = 0;
-        	}
-
-        	count_params+=1;
-
-        }
-
-        count_packed+=1;
-
-        //break;
-
-
-
+	if(total_size_num > sizeof(unsigned long int)){
+		cout<<"Error: Number representation greater than unsigned long int."<<endl;
+		return;
 	}
 
 
+	params.reserve(noOfParams);
 
-	return params;
+
+	for(int i=0; i<packed_params_size; i++){
+
+		for(int j=0; j<packed_params[i].size(); j+=total_size_num){
+
+			if(j+total_size_num > packed_params[i].size()){
+
+				break;
+			}
+
+			unsigned int long num = 0;
+			char* a_ptr = (char*)& num;
+
+
+			for(int k=0; k<total_size_num; k++)
+			{
+
+				a_ptr[total_size_num-1-k] = packed_params[i][j+k];
+
+			}
+
+			params.push_back(num);
+
+			
+		}
+
+
+	}
 
 
 }
@@ -234,221 +225,304 @@ std::vector<unsigned int> unpack_params(std::vector<std::string>& packed_params)
 
 
 
+void clip(std::vector<unsigned long int>& params, unsigned long int threshold){
 
-/*
+	int param_size = params.size();
+	//2^63
+	unsigned long int negativeNumCheck = 9223372036854775808U;
 
-std::map<std::string, std::vector<float>>* read_learners__params_npz(){
+	for(int i=0; i<param_size; i++){
 
-	std::map<std::string, std::vector<float>>* learners_plaintext = new std::map<std::string, std::vector<float>>();
+		//if number is negative and ..
 
+		if(((params[i] & negativeNumCheck) != 0) &&  (params[i] < ((unsigned long int) (-1*threshold)))   ){
 
-
-	for (int i=0; i<totalLearners; i++){
-
-		cnpy::npz_t params_npz = cnpy::npz_load(learner_params_folder + learner_params_files[i]);
-
-		std::vector<float> params;
-
-
-
-		for (auto& x: params_npz) {
-
-			cnpy::NpyArray arr = x.second;
-
-			float* loaded_data = arr.data<float>();
-
-			for (int j = 0; j < arr.shape[0]; j++) {
-    			params.push_back(loaded_data[j]);
-  			}
+			params[i] = (unsigned long int) (-1*threshold);
 
 		}
 
-		/////////////////////remove this ////////////////////////////////
+		//if number is positive and ..
 
-		params.resize(100);
+		else if( ((params[i] & negativeNumCheck) == 0)  &&  (params[i] > (threshold-1)) ){
 
+			params[i] = threshold-1;
 
-
-		/////////////////////remove this ////////////////////////////////
-
-
-
-
-		learners_plaintext->insert(std::pair<std::string, std::vector<float>>("l"+std::to_string(i+1),params) );
-
-
+		}
 
 	}
-
-
-	return learners_plaintext;
 
 
 }
 
 
 
-
-std::map<std::string, std::vector<unsigned int>>* generate_learners_params(){
-
-	std::map<std::string, std::vector<unsigned int>>* learners_plaintext = new std::map<std::string, std::vector<unsigned int>>();
-
-	 srand (time(NULL));
-
-
-
-	for (int i=0; i<totalLearners; i++){
-
-		std::vector<unsigned int> params;
-
-		for (int j = 0; j < noOfParams; j++) {
-    			params.push_back(rand());
-  		}
-
-		learners_plaintext->insert(std::pair<std::string, std::vector<unsigned int>>("l"+std::to_string(i+1),params) );
-
-	}
-
-
-	return learners_plaintext;
-
-
-}
-
-
-std::map<std::string, paillier_plaintext_t**>* convert_to_paillier_plaintext(std::map<std::string, std::vector<unsigned int>>* learners_params){
-
-	std::map<std::string, paillier_plaintext_t**>* learners_params_pt = new std::map<std::string, paillier_plaintext_t**>();
-
-
-	for (auto const& x : *learners_params)
-	{
-
-		std::vector<unsigned int> params_vec = x.second;
-
-		paillier_plaintext_t** params_pt = (paillier_plaintext_t**) malloc(params_vec.size() * sizeof(paillier_plaintext_t*));
-
-		 for(int i=0; i<params_vec.size(); i++){
-
-		 	params_pt[i] = paillier_plaintext_from_ui(i);
-    	}
-
-
-    	learners_params_pt->insert(std::pair<std::string, paillier_plaintext_t**>(x.first,params_pt) );
-
-	}
-
-
-	return learners_params_pt;
-
-}
-
-
-
-
-std::map<std::string, paillier_ciphertext_t**>* encrypt_learners_params(std::map<std::string, paillier_plaintext_t**>* learners_params_pt){
-
-
-	std::map<std::string, paillier_ciphertext_t**>* learners_params_ct = new std::map<std::string, paillier_ciphertext_t**>();
-
-	//std::map<std::string, paillier_ciphertext_t**>::iterator it = learners_params_pt->begin();
-
-
-	//#pragma omp parallel for
-	for(std::map<std::string, paillier_plaintext_t**>::iterator it = std::begin(*learners_params_pt); it != std::end(*learners_params_pt); it++){
-     //construct the distance matrix...
-	}
-
-
-
-
-
-
-
-
-
-	while(it != learners_params_pt->end()){
-
-		paillier_ciphertext_t** params_ct = encryptParams(it->second, noOfParams);
-
-		learners_params_ct->insert(std::pair<std::string, paillier_ciphertext_t**>(it->first,params_ct));
-			
-		it++;
-
-	}
-
+string encryptParams(const std::vector<double>& params, paillier_pubkey_t* public_key){
 
 	
-	for (auto const& x : *learners_params_pt)
-	{
-
-		paillier_ciphertext_t** params_ct = encryptParams(x.second, noOfParams);
-
-    	learners_params_ct->insert(std::pair<std::string, paillier_ciphertext_t**>(x.first,params_ct));
-
-	}
+	vector<unsigned long int> scaled_params;
+	vector<string> packed_params;
 
 
-	return learners_params_ct;
+	scaleUpParams(params, scaled_params);
+	pack_params(scaled_params, packed_params);
 
-}
-
-
-std::map<std::string, paillier_plaintext_t**>* decrypt_learners_params(std::map<std::string, paillier_ciphertext_t**>* learners_params_ct){
-
-
-	std::map<std::string, paillier_plaintext_t**>* learners_params_pt = new std::map<std::string, paillier_plaintext_t**>();
-
-
-	for (auto const& x : *learners_params_ct)
-	{
-
-		
-		paillier_plaintext_t** params_pt = decryptParams(x.second, noOfParams);
-
-    	learners_params_pt->insert(std::pair<std::string, paillier_plaintext_t**>(x.first,params_pt) );
-
-	}
-
-
-	return learners_params_pt;
-
-}
+	scaled_params.clear();
 
 
 
-paillier_ciphertext_t** calculate_homomorphic_sum(std::map<std::string, paillier_ciphertext_t**>* learners_params_ct){
+	string result="";
+	result.reserve(PAILLIER_BITS_TO_BYTES(public_key->bits) * 2 * packed_params.size());
 
-
-	paillier_ciphertext_t** HE_sum = (paillier_ciphertext_t**) malloc(noOfParams * sizeof(paillier_ciphertext_t*));
-
-	std::map<std::string, paillier_ciphertext_t**>::iterator it = learners_params_ct->begin();
 
 	//#pragma omp parallel for
-	for(int i=0; i<noOfParams; i++){
+	for(int i=0; i<packed_params.size(); i++){
 
-		HE_sum[i] = it->second[i];
-		it++;
 
-		while(it != learners_params_ct->end()){
+		RDRAND prng;
 
-			paillier_mul(public_key, HE_sum[i], HE_sum[i], it->second[i]);
-			it++;
+		//void* buf;
+
+		//GenerateBlock((byte*) buf, public_key->bits/8 + 1);
+
+
+		paillier_plaintext_t* pt1 = paillier_plaintext_from_bytes((void*)packed_params[i].c_str(), PAILLIER_BITS_TO_BYTES(public_key->bits));
+		paillier_ciphertext_t* ct1 = paillier_enc(NULL, public_key, pt1, get_rand);
+
+
+		//debugging /////////////////////////////////////////////////
+
+
+		/*char* print_bytes = (char*) paillier_plaintext_to_bytes( PAILLIER_BITS_TO_BYTES(public_key->bits), pt1);
+
+		for(int j=0; j<PAILLIER_BITS_TO_BYTES(public_key->bits); j++){
+
+			std::bitset<8> b(print_bytes[j]);
+			cout<<b; 
+		}
+
+		cout<<endl;*/
+
+
+		//debugging ///////////////////////////////////////////////////
+
+
+
+
+
+	    char* byteCt1 = (char*)paillier_ciphertext_to_bytes(PAILLIER_BITS_TO_BYTES(public_key->bits)*2, ct1);
+
+	    result.append(byteCt1, PAILLIER_BITS_TO_BYTES(public_key->bits)*2);
+
+    	paillier_freeplaintext(pt1);
+    	paillier_freeciphertext(ct1);
+    	free(byteCt1);
+
+
+	}
+
+
+
+	return result;
+
+}
+
+
+std::vector<double> decryptParams(string ciphertext_arr, paillier_pubkey_t* public_key, paillier_prvkey_t* private_key, int total_params){
+
+
+	noOfParams = total_params;
+
+
+	const char* ct_arr = ciphertext_arr.c_str();
+
+	vector<string> packed_params;
+
+	packed_params.reserve(ciphertext_arr.size()/(PAILLIER_BITS_TO_BYTES(public_key->bits*2)));
+
+
+	//#pragma omp parallel for
+	for(int i=0; i<ciphertext_arr.size(); i+=(PAILLIER_BITS_TO_BYTES(public_key->bits))*2){
+
+
+
+	    paillier_ciphertext_t* ct1 = paillier_ciphertext_from_bytes((void*)(ct_arr+i), PAILLIER_BITS_TO_BYTES(public_key->bits)*2);
+
+    	paillier_plaintext_t* dec_pt = paillier_dec(NULL, public_key, private_key, ct1); 
+
+		char* res_plain_ans = (char*) paillier_plaintext_to_bytes( PAILLIER_BITS_TO_BYTES(public_key->bits), dec_pt );
+
+
+		/*cout<<"Dec"<<endl;
+
+
+
+			for(int j=0; j<PAILLIER_BITS_TO_BYTES(public_key->bits); j++){
+
+				std::bitset<8> b(res_plain_ans[j]);
+				cout<<b; 
+			}
+
+			cout<<endl;*/
+
+
+
+		packed_params.push_back(string(res_plain_ans, PAILLIER_BITS_TO_BYTES(public_key->bits)));
+
+		paillier_freeplaintext(dec_pt);
+    	paillier_freeciphertext(ct1);
+    	free(res_plain_ans);
+
+	}
+
+	std::vector<unsigned long int> params;
+	std::vector<double> result_params;
+
+
+	unpack_params(packed_params,  params);
+	scaleDownParams(params, result_params);
+
+
+	return result_params;
+
+
+}
+
+
+string calculate_homomorphic_sum(std::vector<string>& learner_params, paillier_pubkey_t* public_key, paillier_prvkey_t* private_key){
+
+	string result;
+	result.resize(learner_params[0].size());
+	//const char* result_str = result.c_str();
+
+	//cout<<"Inside HE SUM"<<endl;
+
+
+
+	#pragma omp parallel for 
+	for(int i=0; i<learner_params[0].size(); i+= (PAILLIER_BITS_TO_BYTES(public_key->bits*2))){
+
+
+		//paillier_ciphertext_t* encrypted_sum = paillier_create_enc_zero();
+
+
+		const char* L1 = learner_params[0].c_str();
+	    paillier_ciphertext_t* ct1 = paillier_ciphertext_from_bytes((void*)(L1+i), PAILLIER_BITS_TO_BYTES(public_key->bits)*2);
+
+
+		for(int j=1; j<learner_params.size(); j++){
+
+			const char* Ln = learner_params[j].c_str();
+	    	paillier_ciphertext_t* ctn = paillier_ciphertext_from_bytes((void*)(Ln+i), PAILLIER_BITS_TO_BYTES(public_key->bits)*2);
+			paillier_mul(public_key, ct1, ct1, ctn);
+
+
+			//debugging /////////////////////////////////////////////////
+
+			/*cout<<"CN"<<endl;
+	    	paillier_plaintext_t* dec_pt = paillier_dec(NULL, public_key, private_key, ctn); 
+
+			char* print_bytes = (char*) paillier_plaintext_to_bytes( PAILLIER_BITS_TO_BYTES(public_key->bits), dec_pt);
+
+			for(int j=0; j<PAILLIER_BITS_TO_BYTES(public_key->bits); j++){
+
+				std::bitset<8> b(print_bytes[j]);
+				cout<<b; 
+			}
+
+			cout<<endl;*/
+
+			/*cout<<"SUM"<<endl;
+
+			paillier_plaintext_t* dec_pt1 = paillier_dec(NULL, public_key, private_key, encrypted_sum); 
+
+			char* print_bytess = (char*) paillier_plaintext_to_bytes( PAILLIER_BITS_TO_BYTES(public_key->bits), dec_pt1);
+
+			for(int k=0; k<PAILLIER_BITS_TO_BYTES(public_key->bits); k++){
+
+				std::bitset<8> b(print_bytess[k]);
+				cout<<b; 
+			}
+
+			cout<<endl;*/
+
+
+
+
+			//debugging /////////////////////////////////////////////////
+
+
+			paillier_freeciphertext(ctn);
 
 		}
 
-		it = learners_params_ct->begin();
+	    char* byteCt = (char*)paillier_ciphertext_to_bytes(PAILLIER_BITS_TO_BYTES(public_key->bits)*2, ct1);
+
+
+	    /*cout<<"CT bytes"<<endl;
+
+	    for(int k=0; k<PAILLIER_BITS_TO_BYTES(public_key->bits)*2; k++){
+
+			std::bitset<8> b(byteCt[k]);
+				cout<<b; 
+
+		}
+
+		cout<<endl;*/
+
+		/*cout<<"Sum bytes"<<endl;
+
+    	paillier_ciphertext_t* ctn = paillier_ciphertext_from_bytes((void*)(byteCt), PAILLIER_BITS_TO_BYTES(public_key->bits)*2);
+	    paillier_plaintext_t* dec_pt1 = paillier_dec(NULL, public_key, private_key, ctn); 
+
+		char* print_bytess = (char*) paillier_plaintext_to_bytes( PAILLIER_BITS_TO_BYTES(public_key->bits), dec_pt1);
+
+		for(int k=0; k<PAILLIER_BITS_TO_BYTES(public_key->bits); k++){
+
+			std::bitset<8> b(print_bytess[k]);
+			cout<<b; 
+		}
+
+		cout<<endl;*/
+
+
+
+
+
+		int count_ct=0;
+
+
+		for(int k =i; k<i+PAILLIER_BITS_TO_BYTES(public_key->bits)*2; k++){
+
+
+			result[k] = byteCt[count_ct++];
+		}
+
+
+
+		//strncpy((char*)(result_str + i), byteCt, PAILLIER_BITS_TO_BYTES(public_key->bits)*2 );
+
+
+		/*cout<<"String"<<endl;
+
+		for(int k=0; k<result.size(); k++){
+
+			std::bitset<8> b(result[k]);
+				cout<<b; 
+
+		}
+
+		cout<<endl;*/
+
+
+		paillier_freeciphertext(ct1);
+		free(byteCt);
 
 	}
 
 
-	return HE_sum;
+	return result;
 
 }
-
-
-
-*/
 
 
 
