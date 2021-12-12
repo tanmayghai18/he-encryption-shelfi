@@ -7,7 +7,7 @@ import gc
 #from utils.logging.metis_logger import MetisLogger as metis_logger
 
 FHE_helper = m.FHE_Helper("ckks", 8192, 52)
-FHE_helper.load_cyrpto_params()
+FHE_helper.load_crypto_params()
 
 
 def encrypt_compute_decrypt(models, models_scaling_factors, total_model_parameters):

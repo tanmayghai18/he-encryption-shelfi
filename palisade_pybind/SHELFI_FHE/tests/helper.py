@@ -9,7 +9,7 @@ from timeit import default_timer as timer
 
 
 FHE_helper = m.FHE_Helper("ckks", 8192,52)
-FHE_helper.load_cyrpto_params()
+FHE_helper.load_crypto_params()
 
 
 

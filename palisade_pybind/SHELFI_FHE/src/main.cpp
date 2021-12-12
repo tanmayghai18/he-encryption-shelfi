@@ -14,6 +14,8 @@
 #include <pybind11/numpy.h>
 #include <omp.h>
 
+#include "PaillierUtils.h"
+
 
 using namespace std;
 using namespace lbcrypto;
@@ -36,131 +38,186 @@ private:
   usint batchSize;
   usint scaleFactorBits;
   std::string cryptodir;
+  int totalLearners;
 
   CryptoContext<DCRTPoly> cc;
   LPPublicKey<DCRTPoly> pk;
   LPPrivateKey<DCRTPoly> sk;
 
+  PaillierUtils* paillier_utils;
+
 public:
-  FHE_Helper(string scheme, usint batchSize, usint scaleFactorBits, string cryptodir = "") {
+  FHE_Helper(string scheme, usint batchSize, usint scaleFactorBits, int learners, string cryptodir) {
 
     this->scheme = scheme;
     this->batchSize = batchSize;
     this->scaleFactorBits = scaleFactorBits;
     this->cryptodir = cryptodir;
+    this->totalLearners = learners;
   }
 
   void load_crypto_params() {
 
-    if (!Serial::DeserializeFromFile(cryptodir + "/cryptocontext.txt", cc,
+
+    if(scheme == "paillier"){
+
+      //PaillierUtils(learners, keys_path, mod_bits, num_bits, prec_bits)
+
+      if(paillier_utils == nullptr){
+        paillier_utils = new PaillierUtils(totalLearners, cryptodir+"/", 2048, 17, 13);
+
+      }
+
+
+
+    }
+    else if(scheme == "ckks"){
+
+      if (!Serial::DeserializeFromFile(cryptodir + "/cryptocontext.txt", cc,
                                      SerType::BINARY)) {
-      std::cout << "Could not read serialization from "
-                << cryptodir + "/cryptocontext.txt" << std::endl;
+        std::cout << "Could not read serialization from "
+                  << cryptodir + "/cryptocontext.txt" << std::endl;
+      }
+
+      if (!Serial::DeserializeFromFile(cryptodir + "/key-public.txt", pk,
+                                       SerType::BINARY)) {
+        std::cout << "Could not read public key" << std::endl;
+      }
+
+      if (Serial::DeserializeFromFile(cryptodir + "/key-private.txt", sk,
+                                      SerType::BINARY) == false) {
+        std::cerr << "Could not read secret key" << std::endl;
+      }
+
+
+
     }
 
-    if (!Serial::DeserializeFromFile(cryptodir + "/key-public.txt", pk,
-                                     SerType::BINARY)) {
-      std::cout << "Could not read public key" << std::endl;
-    }
-
-    if (Serial::DeserializeFromFile(cryptodir + "/key-private.txt", sk,
-                                    SerType::BINARY) == false) {
-      std::cerr << "Could not read secret key" << std::endl;
-    }
+    
   }
 
   int genCryptoContextAndKeyGen() {
-    CryptoContext<DCRTPoly> cryptoContext;
-    if (scheme == "bgvrns") {
-      int plaintextModulus = 65537;
-      double sigma = 3.2;
-      SecurityLevel securityLevel = HEStd_128_classic;
-      uint32_t depth = 2;
 
-      // Instantiate the crypto context
-      cryptoContext = CryptoContextFactory<DCRTPoly>::genCryptoContextBGVrns(
-          depth, plaintextModulus, securityLevel, sigma, depth, OPTIMIZED, BV,
-          0, 0, 0, 0, 0, batchSize);
 
-      std::cout << "\nThe cryptocontext has been generated.\n" << std::endl;
+    if(scheme == "paillier"){
 
-    } else if (scheme == "ckks") {
+      if(paillier_utils == nullptr){
+        //cout<<"init before"<<endl;
 
-      usint multDepth = 2;
+        paillier_utils = new PaillierUtils(totalLearners, cryptodir+"/", 2048, 17, 13);
+        //cout<<"init done"<<endl;
 
-      cryptoContext = CryptoContextFactory<DCRTPoly>::genCryptoContextCKKS(
-          multDepth, scaleFactorBits, batchSize);
+      }
+
+      //cout<<"gen"<<endl;
+
+      paillier_utils->genKeys(this->cryptodir + "/");
+      //cout<<"gen done"<<endl;
+      return 1;
+
     }
 
-    // enable features that you wish to use
-    cryptoContext->Enable(ENCRYPTION);
-    cryptoContext->Enable(SHE);
-    // cryptoContext->Enable(LEVELEDSHE);
+    else if(scheme == "ckks"){
 
-    std::cout << "\nThe cryptocontext has been generated." << std::endl;
+      CryptoContext<DCRTPoly> cryptoContext;
+      if (scheme == "bgvrns") {
+        int plaintextModulus = 65537;
+        double sigma = 3.2;
+        SecurityLevel securityLevel = HEStd_128_classic;
+        uint32_t depth = 2;
 
-    // Serialize cryptocontext
-    if (!Serial::SerializeToFile(cryptodir + "/cryptocontext.txt",
-                                 cryptoContext, SerType::BINARY)) {
-      std::cerr << "Error writing serialization of the crypto context to "
-                   "cryptocontext.txt"
-                << std::endl;
-      return 0;
-    }
-    std::cout << "The cryptocontext has been serialized." << std::endl;
+        // Instantiate the crypto context
+        cryptoContext = CryptoContextFactory<DCRTPoly>::genCryptoContextBGVrns(
+            depth, plaintextModulus, securityLevel, sigma, depth, OPTIMIZED, BV,
+            0, 0, 0, 0, 0, batchSize);
 
-    // Initialize Public Key Containers
-    LPKeyPair<DCRTPoly> keyPair;
+        std::cout << "\nThe cryptocontext has been generated.\n" << std::endl;
 
-    // Generate a public/private key pair
-    keyPair = cryptoContext->KeyGen();
+      } else if (scheme == "ckks") {
 
-    std::cout << "The key pair has been generated." << std::endl;
+        usint multDepth = 2;
 
-    // Serialize the public key
-    if (!Serial::SerializeToFile(cryptodir + "/key-public.txt",
-                                 keyPair.publicKey, SerType::BINARY)) {
-      std::cerr << "Error writing serialization of public key to key-public.txt"
-                << std::endl;
-      return 0;
-    }
-    std::cout << "The public key has been serialized." << std::endl;
+        cryptoContext = CryptoContextFactory<DCRTPoly>::genCryptoContextCKKS(
+            multDepth, scaleFactorBits, batchSize);
+      }
 
-    // Serialize the secret key
-    if (!Serial::SerializeToFile(cryptodir + "/key-private.txt",
-                                 keyPair.secretKey, SerType::BINARY)) {
-      std::cerr
-          << "Error writing serialization of private key to key-private.txt"
-          << std::endl;
-      return 0;
-    }
-    std::cout << "The secret key has been serialized." << std::endl;
+      // enable features that you wish to use
+      cryptoContext->Enable(ENCRYPTION);
+      cryptoContext->Enable(SHE);
+      // cryptoContext->Enable(LEVELEDSHE);
 
-    // Generate the relinearization key
-    cryptoContext->EvalMultKeyGen(keyPair.secretKey);
+      std::cout << "\nThe cryptocontext has been generated." << std::endl;
 
-    std::cout << "The eval mult keys have been generated." << std::endl;
-
-    // Serialize the relinearization (evaluation) key for homomorphic
-    // multiplication
-    std::ofstream emkeyfile(cryptodir + "/" + "key-eval-mult.txt",
-                            std::ios::out | std::ios::binary);
-    if (emkeyfile.is_open()) {
-      if (cryptoContext->SerializeEvalMultKey(emkeyfile, SerType::BINARY) ==
-          false) {
-        std::cerr << "Error writing serialization of the eval mult keys to "
-                     "key-eval-mult.txt"
+      // Serialize cryptocontext
+      if (!Serial::SerializeToFile(cryptodir + "/cryptocontext.txt",
+                                   cryptoContext, SerType::BINARY)) {
+        std::cerr << "Error writing serialization of the crypto context to "
+                     "cryptocontext.txt"
                   << std::endl;
         return 0;
       }
-      std::cout << "The eval mult keys have been serialized." << std::endl;
+      std::cout << "The cryptocontext has been serialized." << std::endl;
 
-      emkeyfile.close();
-    } else {
-      std::cerr << "Error serializing eval mult keys" << std::endl;
-      return 0;
+      // Initialize Public Key Containers
+      LPKeyPair<DCRTPoly> keyPair;
+
+      // Generate a public/private key pair
+      keyPair = cryptoContext->KeyGen();
+
+      std::cout << "The key pair has been generated." << std::endl;
+
+      // Serialize the public key
+      if (!Serial::SerializeToFile(cryptodir + "/key-public.txt",
+                                   keyPair.publicKey, SerType::BINARY)) {
+        std::cerr << "Error writing serialization of public key to key-public.txt"
+                  << std::endl;
+        return 0;
+      }
+      std::cout << "The public key has been serialized." << std::endl;
+
+      // Serialize the secret key
+      if (!Serial::SerializeToFile(cryptodir + "/key-private.txt",
+                                   keyPair.secretKey, SerType::BINARY)) {
+        std::cerr
+            << "Error writing serialization of private key to key-private.txt"
+            << std::endl;
+        return 0;
+      }
+      std::cout << "The secret key has been serialized." << std::endl;
+
+      // Generate the relinearization key
+      cryptoContext->EvalMultKeyGen(keyPair.secretKey);
+
+      std::cout << "The eval mult keys have been generated." << std::endl;
+
+      // Serialize the relinearization (evaluation) key for homomorphic
+      // multiplication
+      std::ofstream emkeyfile(cryptodir + "/" + "key-eval-mult.txt",
+                              std::ios::out | std::ios::binary);
+      if (emkeyfile.is_open()) {
+        if (cryptoContext->SerializeEvalMultKey(emkeyfile, SerType::BINARY) ==
+            false) {
+          std::cerr << "Error writing serialization of the eval mult keys to "
+                       "key-eval-mult.txt"
+                    << std::endl;
+          return 0;
+        }
+        std::cout << "The eval mult keys have been serialized." << std::endl;
+
+        emkeyfile.close();
+      } else {
+        std::cerr << "Error serializing eval mult keys" << std::endl;
+        return 0;
+      }
+      return 1;
+
+
     }
-    return 1;
+
+    return 0;
+
+
+
   }
 
   py::bytes encrypt(py::array_t<double> data_array) {
@@ -171,13 +228,33 @@ public:
     unsigned long int size = data_array.size();
     auto learner_Data = data_array.data();
 
-    vector<Ciphertext<DCRTPoly>> ciphertext_data(
-        (int)((size + batchSize) / batchSize));
-
 
     //auto start_enc = omp_get_wtime();
 
-    if (scheme == "ckks") {
+    if(scheme == "paillier"){
+
+      vector<double> data;
+      data.reserve(size);
+
+      for(int i=0; i<size; i++){
+
+        data.push_back(learner_Data[i]);
+
+        //cout<<learner_Data[i]<<endl;
+
+      }
+
+      string enc_data = paillier_utils->encryptParams(data);
+
+      return py::bytes(enc_data);
+
+    }
+
+
+    else if (scheme == "ckks") {
+
+      vector<Ciphertext<DCRTPoly>> ciphertext_data(
+        (int)((size + batchSize) / batchSize));
 
       if (size > (unsigned long int)batchSize) {
 
@@ -206,6 +283,8 @@ public:
           batch.clear();
         }
 
+
+
       }
 
       else {
@@ -224,7 +303,18 @@ public:
         ciphertext_data[0] = cc->Encrypt(pk, plaintext_data);
       }
 
+
+      stringstream s;
+      const SerType::SERBINARY st;
+      Serial::Serialize(ciphertext_data, s, st);
+
+
+      py::bytes res(s.str());
+
+      return res;
+
     }
+
 
     else {
 
@@ -241,12 +331,7 @@ public:
 
     //auto start_serialize = omp_get_wtime();
 
-    stringstream s;
-    const SerType::SERBINARY st;
-    Serial::Serialize(ciphertext_data, s, st);
-
-
-    py::bytes res(s.str());
+    
 
     //auto end_serialize = omp_get_wtime();
 
@@ -257,7 +342,7 @@ public:
     //std::cout <<"Encryption Time: "<< elapsed_time_encryption*1000 << " milliseconds"<<'\n';
     //std::cout <<"Serialization Time: "<< elapsed_time_serialize*1000 << " milliseconds"<<'\n';
 
-    return res;
+
   }
 
   
@@ -269,90 +354,131 @@ public:
     //double elapsed_time_pwa = 0.0;
     //double elapsed_time_serialize = 0.0;
 
-
-    if (scheme != "ckks") {
-      std::cout << "Not supported!" << std::endl;
-    }
-
-
     if (learners_Data.size() != scalingFactors.size()) {
       cout << "Error: learners_Data and scalingFactors size mismatch" << endl;
       return "";
     }
 
-    const SerType::SERBINARY st;
 
-    vector<Ciphertext<DCRTPoly>> result_ciphertext;
+    if(scheme == "paillier"){
 
-    for (unsigned long int i = 0; i < learners_Data.size(); i++) {
-
-      //auto start_deserialize = omp_get_wtime();
-
-      string dat = std::string(py::str(learners_Data[i]));
-
-      stringstream ss(dat);
-      vector<Ciphertext<DCRTPoly>> learner_ciphertext;
-
-      Serial::Deserialize(learner_ciphertext, ss, st);
-
-      //auto end_deserialize = omp_get_wtime();
+      vector<float> scaling_factors;
+      vector<string> data;
+      //data.reserve(learners_Data.size());
 
 
-      //elapsed_time_deserialize+=end_deserialize - start_deserialize; 
-
-
-      //auto start_pwa = omp_get_wtime();
-
-      for (unsigned long int j = 0; j < learner_ciphertext.size(); j++) {
+      for(unsigned long int i=0; i<scalingFactors.size(); i++){
 
         float sc = py::float_(scalingFactors[i]);
 
-        learner_ciphertext[j] = cc->EvalMult(learner_ciphertext[j], sc);
+        scaling_factors.push_back(sc);
+
       }
 
-      if (result_ciphertext.size() == 0) {
 
-        result_ciphertext = learner_ciphertext;
+      for (unsigned long int i = 0; i < learners_Data.size(); i++) {
+
+        data.push_back(std::string(py::str(learners_Data[i])) );
+
       }
 
-      else {
+
+      string result = paillier_utils->calculate_homomorphic_sum(data, scaling_factors);
+
+      return py::bytes(result);
+
+
+    }
+
+    else if (scheme == "ckks"){
+
+      const SerType::SERBINARY st;
+
+      vector<Ciphertext<DCRTPoly>> result_ciphertext;
+
+      for (unsigned long int i = 0; i < learners_Data.size(); i++) {
+
+        //auto start_deserialize = omp_get_wtime();
+
+        string dat = std::string(py::str(learners_Data[i]));
+
+        stringstream ss(dat);
+        vector<Ciphertext<DCRTPoly>> learner_ciphertext;
+
+        Serial::Deserialize(learner_ciphertext, ss, st);
+
+        //auto end_deserialize = omp_get_wtime();
+
+
+        //elapsed_time_deserialize+=end_deserialize - start_deserialize; 
+
+
+        //auto start_pwa = omp_get_wtime();
 
         for (unsigned long int j = 0; j < learner_ciphertext.size(); j++) {
 
-          result_ciphertext[j] =
-              cc->EvalAdd(result_ciphertext[j], learner_ciphertext[j]);
+          float sc = py::float_(scalingFactors[i]);
+
+          learner_ciphertext[j] = cc->EvalMult(learner_ciphertext[j], sc);
         }
+
+        if (result_ciphertext.size() == 0) {
+
+          result_ciphertext = learner_ciphertext;
+        }
+
+        else {
+
+          for (unsigned long int j = 0; j < learner_ciphertext.size(); j++) {
+
+            result_ciphertext[j] =
+                cc->EvalAdd(result_ciphertext[j], learner_ciphertext[j]);
+          }
+        }
+
+        //auto end_pwa = omp_get_wtime();
+
+        //elapsed_time_pwa+=end_pwa - start_pwa; 
+
+        learner_ciphertext.clear();
       }
 
-      //auto end_pwa = omp_get_wtime();
 
-      //elapsed_time_pwa+=end_pwa - start_pwa; 
+      //auto start_serialize = std::chrono::system_clock::now();
 
-      learner_ciphertext.clear();
+      stringstream ss;
+      Serial::Serialize(result_ciphertext, ss, st);
+      py::bytes res(ss.str());
+
+      //auto end_serialize = std::chrono::system_clock::now();
+
+      //elapsed_time_serialize+=std::chrono::duration_cast<std::chrono::milliseconds>(end_serialize
+        //- start_serialize).count(); 
+
+
+      //std::cout <<"Deserialization time: "<< elapsed_time_deserialize*1000 << " milliseconds"<<'\n';
+      //std::cout <<"PWA Time: "<< elapsed_time_pwa*1000 << " milliseconds"<<'\n';
+      //std::cout <<"Serialization Time: "<< elapsed_time_serialize << " milliseconds"<<'\n';
+
+
+
+      result_ciphertext.clear();
+
+      return res;
+
+
+
+    }
+
+    else {
+
+      std::cout << "Not supported!" << std::endl;
+      return "";
+
     }
 
 
-    //auto start_serialize = std::chrono::system_clock::now();
-
-    stringstream ss;
-    Serial::Serialize(result_ciphertext, ss, st);
-    py::bytes res(ss.str());
-
-    //auto end_serialize = std::chrono::system_clock::now();
-
-    //elapsed_time_serialize+=std::chrono::duration_cast<std::chrono::milliseconds>(end_serialize
-      //- start_serialize).count(); 
-
-
-    //std::cout <<"Deserialization time: "<< elapsed_time_deserialize*1000 << " milliseconds"<<'\n';
-    //std::cout <<"PWA Time: "<< elapsed_time_pwa*1000 << " milliseconds"<<'\n';
-    //std::cout <<"Serialization Time: "<< elapsed_time_serialize << " milliseconds"<<'\n';
-
-
-
-    result_ciphertext.clear();
-
-    return res;
+    
   }
 
   py::array_t<double> decrypt(string learner_Data,
@@ -362,82 +488,131 @@ public:
     //double elapsed_time_decrypt = 0.0;
 
 
-    //auto start_deserialize = std::chrono::system_clock::now();
-    const SerType::SERBINARY st;
-    stringstream ss(learner_Data);
+    if(scheme == "paillier"){
 
-    vector<Ciphertext<DCRTPoly>> learner_ciphertext;
-    Serial::Deserialize(learner_ciphertext, ss, st);
+      //cout<<learner_Data<<endl;
 
-    //auto end_deserialize = std::chrono::system_clock::now();
+      //cout<<data_dimesions<<endl;
 
-    //elapsed_time_deserialize+=std::chrono::duration_cast<std::chrono::milliseconds>(end_deserialize
-      //- start_deserialize).count(); 
+      vector<double> dec_res = paillier_utils->decryptParams(learner_Data, data_dimesions);
+      //cout<<dec_res.size()<<endl;
 
+      //for(int i=0; i<dec_res.size(); i++){
 
+        //cout<<"this "<<dec_res[i]<<endl;
 
-    auto result = py::array_t<double>(data_dimesions);
-
-    py::buffer_info buf3 = result.request();
-
-    double *ptr3 = static_cast<double *>(buf3.ptr);
+     // }
 
 
-    //auto start_decrypt = omp_get_wtime();
-
-    #pragma omp parallel for
-    for (unsigned long int i = 0; i < learner_ciphertext.size(); i++) {
-
-
-      Plaintext pt;
-      cc->Decrypt(sk, learner_ciphertext[i], &pt);
-
-      int length;
-
-      if (i == learner_ciphertext.size() - 1) {
-
-        length = data_dimesions - (i)*batchSize;
-      }
-
-      else {
-
-        length = batchSize;
-      }
-
-      pt->SetLength(length);
-
-      vector<double> layer_data = pt->GetRealPackedValue();
-
-      int m = i*batchSize;
-
-      for (unsigned long int j = 0; j < layer_data.size(); j++) {
-
-        ptr3[m++] = layer_data[j];
-      }
 
       
+
+
+      auto result = py::array_t<double>(data_dimesions);
+      py::buffer_info buf3 = result.request();
+      double *ptr3 = static_cast<double *>(buf3.ptr);
+
+      for (unsigned long int j = 0; j < dec_res.size(); j++) {
+
+          ptr3[j] = dec_res[j];
+      }
+
+      return result;
+
+
+    }
+    else if (scheme == "ckks"){
+
+      //auto start_deserialize = std::chrono::system_clock::now();
+      const SerType::SERBINARY st;
+      stringstream ss(learner_Data);
+
+      vector<Ciphertext<DCRTPoly>> learner_ciphertext;
+      Serial::Deserialize(learner_ciphertext, ss, st);
+
+      //auto end_deserialize = std::chrono::system_clock::now();
+
+      //elapsed_time_deserialize+=std::chrono::duration_cast<std::chrono::milliseconds>(end_deserialize
+        //- start_deserialize).count(); 
+
+
+
+      auto result = py::array_t<double>(data_dimesions);
+
+      py::buffer_info buf3 = result.request();
+
+      double *ptr3 = static_cast<double *>(buf3.ptr);
+
+
+      //auto start_decrypt = omp_get_wtime();
+
+      #pragma omp parallel for
+      for (unsigned long int i = 0; i < learner_ciphertext.size(); i++) {
+
+
+        Plaintext pt;
+        cc->Decrypt(sk, learner_ciphertext[i], &pt);
+
+        int length;
+
+        if (i == learner_ciphertext.size() - 1) {
+
+          length = data_dimesions - (i)*batchSize;
+        }
+
+        else {
+
+          length = batchSize;
+        }
+
+        pt->SetLength(length);
+
+        vector<double> layer_data = pt->GetRealPackedValue();
+
+        int m = i*batchSize;
+
+        for (unsigned long int j = 0; j < layer_data.size(); j++) {
+
+          ptr3[m++] = layer_data[j];
+        }
+
+        
+      }
+
+      //auto end_decrypt = omp_get_wtime();
+
+      //elapsed_time_decrypt+=end_decrypt - start_decrypt; 
+
+      //std::cout <<"Deserialization time: "<< elapsed_time_deserialize<< " milliseconds"<<'\n';
+      //std::cout <<"Decryption Time: "<< elapsed_time_decrypt *1000<< " milliseconds"<<'\n';
+
+
+      learner_ciphertext.clear();
+
+      return result;
+
+
+
     }
 
-    //auto end_decrypt = omp_get_wtime();
+    else {
 
-    //elapsed_time_decrypt+=end_decrypt - start_decrypt; 
+      auto result = py::array_t<double>(data_dimesions);
 
-    //std::cout <<"Deserialization time: "<< elapsed_time_deserialize<< " milliseconds"<<'\n';
-    //std::cout <<"Decryption Time: "<< elapsed_time_decrypt *1000<< " milliseconds"<<'\n';
+      return result;
+    }
 
 
-    learner_ciphertext.clear();
 
-    return result;
   }
 };
 
 PYBIND11_MODULE(SHELFI_FHE, m) {
 
 py::class_<FHE_Helper>(m, "FHE_Helper")
-        .def(py::init<std::string &, usint, usint, std::string &>(),
+        .def(py::init<std::string &, usint, usint, int, std::string &>(),
                 py::arg("scheme") = py::str("ckks"), py::arg("batchSize") = 8192,
-                py::arg("scaleFactorBits") = 52, py::arg("cryptodir") = py::str("../resources/cryptoparams"))
+                py::arg("scaleFactorBits") = 52, py::arg("learners") = 10, py::arg("cryptodir") = py::str("../resources/cryptoparams"))
       .def("load_crypto_params", &FHE_Helper::load_crypto_params)
       .def("encrypt", &FHE_Helper::encrypt)
       .def("decrypt", &FHE_Helper::decrypt)

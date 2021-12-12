@@ -13,6 +13,15 @@ set(CMAKE_CXX_STANDARD 11)
 find_package(Palisade REQUIRED)
 find_package(OpenMP)
 
+set(CMAKE_MODULE_PATH
+    ${CMAKE_CURRENT_LIST_DIR}/cmake
+    ${CMAKE_MODULE_PATH}
+)
+
+
+find_package(GMP REQUIRED)
+
+
 set(CMAKE_CXX_FLAGS ${PALISADE_CXX_FLAGS})
 set(CMAKE_EXE_LINKER_FLAGS ${PALISADE_EXE_LINKER_FLAGS})
 
@@ -29,17 +38,28 @@ link_directories(${OPENMP_LIBRARIES})
 link_libraries(${PALISADE_LIBRARIES})
 
 
+include_directories(include)
+
+
 add_subdirectory(pybind11)
 # TODO Try to find another way to remove the os specifications postfix in the .so output file.
-pybind11_add_module(SHELFI_FHE MODULE src/main.cpp)
+pybind11_add_module(SHELFI_FHE MODULE src/main.cpp src/PaillierUtils.cpp src/paillier.c)
+#pybind11_add_module(SHELFI_FHE MODULE src/main.cpp)
 
 # EXAMPLE_VERSION_INFO is defined by setup.py and passed into the C++ code as a
 # define (VERSION_INFO) here.
 target_compile_definitions(SHELFI_FHE PRIVATE VERSION_INFO=${EXAMPLE_VERSION_INFO})
 
 
-target_compile_options(SHELFI_FHE PRIVATE -Wall ${OpenMP_CXX_FLAGS})
-target_link_libraries(SHELFI_FHE PRIVATE ${OpenMP_CXX_FLAGS})
+#target_compile_options(SHELFI_FHE PRIVATE -Wall ${OpenMP_CXX_FLAGS})
+
+target_compile_options(SHELFI_FHE PRIVATE $<$<COMPILE_LANG_AND_ID:CXX,GNU>:-Wall;-lgmp;-lgmpxx;-lcryptopp;${OpenMP_CXX_FLAGS}>)
+
+
+
+target_link_libraries(SHELFI_FHE PRIVATE ${OpenMP_CXX_FLAGS} gmp cryptopp)
+
+
 
 # We need to include the install command in order for the foreign_cc cmake bazel rule to work.
 # Pay attention to the fact that for normal uses, the generated binary does not need to be installed system-wise.
