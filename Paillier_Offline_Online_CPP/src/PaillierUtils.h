@@ -94,17 +94,17 @@ public:
 
 
 	//Offline Phase
-	void getEncryptedRandomness(string path, unsigned long int params, unsigned int iteration, string& result);
-	void addEncryptedRandomness(std::vector<string>& encrypted_rand_learners, string& result);
+	string getEncryptedRandomness(string path, unsigned long int params, unsigned int iteration);
+	string addEncryptedRandomness(std::vector<string>& encrypted_rand_learners);
 	void decryptRandomnessSum(string& enc_rand_sum, string path, unsigned long int params, unsigned int iteration);
 
 
 
 
 	//Online Phase
-	void maskParams(std::vector<double>& params, string path, unsigned int iteration, string& result);
-	void sumMaskedParams(std::vector<string>& learner_params, unsigned long int params, string& result);
-	void unmaskParams(string& learner_params, int params, string sum_random_path, unsigned int iteration, std::vector<double>& result);
+	string maskParams(std::vector<double>& params, string path, unsigned int iteration);
+	string sumMaskedParams(std::vector<string>& learner_params, unsigned long int params);
+	std::vector<double> unmaskParams(string& learner_params, int params, string sum_random_path, unsigned int iteration);
 
 
 
