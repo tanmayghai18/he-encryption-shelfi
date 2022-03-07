@@ -9,7 +9,6 @@
 #include "pubkeylp-ser.h"
 #include "scheme/bgvrns/bgvrns-ser.h"
 #include "scheme/ckks/ckks-ser.h"
-#include <string>
 
 #include <pybind11/numpy.h>
 #include <omp.h>
@@ -40,55 +39,66 @@ private:
   std::string cryptodir;
   int totalLearners;
 
+  //Paillier params
+  int modulus_bits;
+  int num_bits;
+  int precision_bits;
+  string randomnessdir;
+
+
   CryptoContext<DCRTPoly> cc;
   LPPublicKey<DCRTPoly> pk;
   LPPrivateKey<DCRTPoly> sk;
 
-  PaillierUtils* paillier_utils;
+  PaillierUtils* paillier_utils = nullptr;
 
 public:
-  FHE_Helper(string scheme, usint batchSize, usint scaleFactorBits, int learners, string cryptodir) {
+  FHE_Helper(string scheme, usint batchSize, usint scaleFactorBits, int learners,
+              string cryptodir, string randomnessdir, int modulus_bits, int num_bits, int precision_bits) {
 
     this->scheme = scheme;
     this->batchSize = batchSize;
     this->scaleFactorBits = scaleFactorBits;
     this->cryptodir = cryptodir;
     this->totalLearners = learners;
+
+    //Paillier params
+    this->modulus_bits = modulus_bits;
+    this->num_bits = num_bits;
+    this->precision_bits = precision_bits;
+    this->randomnessdir = randomnessdir;
+
   }
 
   void load_crypto_params() {
 
-
     if(scheme == "paillier"){
 
-      //PaillierUtils(learners, keys_path, mod_bits, num_bits, prec_bits)
-
       if(paillier_utils == nullptr){
-        paillier_utils = new PaillierUtils(totalLearners, cryptodir+"/", 2048, 17, 13);
+
+        paillier_utils = new PaillierUtils(totalLearners, cryptodir, modulus_bits, num_bits, precision_bits);
 
       }
-
 
 
     }
     else if(scheme == "ckks"){
 
-      if (!Serial::DeserializeFromFile(cryptodir + "/cryptocontext.txt", cc,
+      if (!Serial::DeserializeFromFile(cryptodir + "cryptocontext.txt", cc,
                                      SerType::BINARY)) {
         std::cout << "Could not read serialization from "
-                  << cryptodir + "/cryptocontext.txt" << std::endl;
+                  << cryptodir + "cryptocontext.txt" << std::endl;
       }
 
-      if (!Serial::DeserializeFromFile(cryptodir + "/key-public.txt", pk,
+      if (!Serial::DeserializeFromFile(cryptodir + "key-public.txt", pk,
                                        SerType::BINARY)) {
         std::cout << "Could not read public key" << std::endl;
       }
 
-      if (Serial::DeserializeFromFile(cryptodir + "/key-private.txt", sk,
+      if (Serial::DeserializeFromFile(cryptodir + "key-private.txt", sk,
                                       SerType::BINARY) == false) {
         std::cerr << "Could not read secret key" << std::endl;
       }
-
 
 
     }
@@ -102,113 +112,52 @@ public:
     if(scheme == "paillier"){
 
       if(paillier_utils == nullptr){
-        //cout<<"init before"<<endl;
 
-        paillier_utils = new PaillierUtils(totalLearners, cryptodir+"/", 2048, 17, 13);
-        //cout<<"init done"<<endl;
+        paillier_utils = new PaillierUtils(totalLearners, cryptodir, modulus_bits, num_bits, precision_bits);
 
       }
 
-      //cout<<"gen"<<endl;
-
-      paillier_utils->genKeys(this->cryptodir + "/");
-      //cout<<"gen done"<<endl;
+      paillier_utils->genKeys(this->cryptodir);
       return 1;
 
     }
 
     else if(scheme == "ckks"){
 
-      CryptoContext<DCRTPoly> cryptoContext;
-      if (scheme == "bgvrns") {
-        int plaintextModulus = 65537;
-        double sigma = 3.2;
-        SecurityLevel securityLevel = HEStd_128_classic;
-        uint32_t depth = 2;
+      usint multDepth = 1;
 
-        // Instantiate the crypto context
-        cryptoContext = CryptoContextFactory<DCRTPoly>::genCryptoContextBGVrns(
-            depth, plaintextModulus, securityLevel, sigma, depth, OPTIMIZED, BV,
-            0, 0, 0, 0, 0, batchSize);
-
-        std::cout << "\nThe cryptocontext has been generated.\n" << std::endl;
-
-      } else if (scheme == "ckks") {
-
-        usint multDepth = 2;
-
-        cryptoContext = CryptoContextFactory<DCRTPoly>::genCryptoContextCKKS(
-            multDepth, scaleFactorBits, batchSize);
-      }
+      CryptoContext<DCRTPoly> cryptoContext = CryptoContextFactory<DCRTPoly>::genCryptoContextCKKS(
+                                              multDepth, scaleFactorBits, batchSize);
+      
 
       // enable features that you wish to use
       cryptoContext->Enable(ENCRYPTION);
       cryptoContext->Enable(SHE);
       // cryptoContext->Enable(LEVELEDSHE);
 
-      std::cout << "\nThe cryptocontext has been generated." << std::endl;
+      string cryptocontext_file = "cryptocontext.txt";
+      string public_key_file = "key-public.txt";
+      string private_key_file = "key-private.txt";
 
-      // Serialize cryptocontext
-      if (!Serial::SerializeToFile(cryptodir + "/cryptocontext.txt",
-                                   cryptoContext, SerType::BINARY)) {
-        std::cerr << "Error writing serialization of the crypto context to "
-                     "cryptocontext.txt"
-                  << std::endl;
+
+      if (!Serial::SerializeToFile(cryptodir + cryptocontext_file, cryptoContext, SerType::BINARY)){
+        std::cerr << "Error writing serialization of the crypto context to "<<cryptocontext_file<< std::endl;
         return 0;
       }
-      std::cout << "The cryptocontext has been serialized." << std::endl;
 
-      // Initialize Public Key Containers
-      LPKeyPair<DCRTPoly> keyPair;
+      LPKeyPair<DCRTPoly> keyPair = cryptoContext->KeyGen();
 
-      // Generate a public/private key pair
-      keyPair = cryptoContext->KeyGen();
-
-      std::cout << "The key pair has been generated." << std::endl;
-
-      // Serialize the public key
-      if (!Serial::SerializeToFile(cryptodir + "/key-public.txt",
-                                   keyPair.publicKey, SerType::BINARY)) {
-        std::cerr << "Error writing serialization of public key to key-public.txt"
-                  << std::endl;
+      if (!Serial::SerializeToFile(cryptodir + public_key_file, keyPair.publicKey, SerType::BINARY)) {
+        std::cerr << "Error writing serialization of public key to "<<public_key_file<< std::endl;
         return 0;
       }
-      std::cout << "The public key has been serialized." << std::endl;
 
-      // Serialize the secret key
-      if (!Serial::SerializeToFile(cryptodir + "/key-private.txt",
-                                   keyPair.secretKey, SerType::BINARY)) {
-        std::cerr
-            << "Error writing serialization of private key to key-private.txt"
-            << std::endl;
+      if (!Serial::SerializeToFile(cryptodir + private_key_file, keyPair.secretKey, SerType::BINARY)) {
+        std::cerr<< "Error writing serialization of private key to "<<private_key_file<< std::endl;
         return 0;
       }
-      std::cout << "The secret key has been serialized." << std::endl;
 
-      // Generate the relinearization key
-      cryptoContext->EvalMultKeyGen(keyPair.secretKey);
 
-      std::cout << "The eval mult keys have been generated." << std::endl;
-
-      // Serialize the relinearization (evaluation) key for homomorphic
-      // multiplication
-      std::ofstream emkeyfile(cryptodir + "/" + "key-eval-mult.txt",
-                              std::ios::out | std::ios::binary);
-      if (emkeyfile.is_open()) {
-        if (cryptoContext->SerializeEvalMultKey(emkeyfile, SerType::BINARY) ==
-            false) {
-          std::cerr << "Error writing serialization of the eval mult keys to "
-                       "key-eval-mult.txt"
-                    << std::endl;
-          return 0;
-        }
-        std::cout << "The eval mult keys have been serialized." << std::endl;
-
-        emkeyfile.close();
-      } else {
-        std::cerr << "Error serializing eval mult keys" << std::endl;
-        return 0;
-      }
       return 1;
 
 
@@ -217,10 +166,53 @@ public:
     return 0;
 
 
+  }
+
+
+
+  //Paillier Offline/////////////////////////////////////////////////////////////
+
+
+  py::bytes genPaillierRandOffline( unsigned long int params, unsigned int iteration){
+
+    string result="";
+    paillier_utils->getEncryptedRandomness(this->randomnessdir, params, iteration, result);
+    return py::bytes(result);
 
   }
 
-  py::bytes encrypt(py::array_t<double> data_array) {
+  py::bytes addPaillierRandOffline(py::list encrypted_rand_learners){
+
+    string result;
+    vector<string> data;
+    data.reserve(encrypted_rand_learners.size());
+
+    for (unsigned long int i = 0; i < encrypted_rand_learners.size(); i++) {
+
+        data.push_back(std::string(py::str(encrypted_rand_learners[i])) );
+
+    }
+
+    paillier_utils->addEncryptedRandomness(data, result);
+    return py::bytes(result);
+
+  }
+
+  void storePaillierRandSumOffline( string enc_rand_sum, unsigned long int params, unsigned int iteration){
+
+
+    paillier_utils->decryptRandomnessSum(enc_rand_sum, this->randomnessdir, params, iteration);
+
+
+  }
+
+
+//Paillier Offline/////////////////////////////////////////////////////////////
+
+
+
+
+  py::bytes encrypt( py::array_t<double> data_array, unsigned int iteration) {
 
     //double elapsed_time_encryption = 0.0;
     //double elapsed_time_serialize = 0.0;
@@ -240,12 +232,11 @@ public:
 
         data.push_back(learner_Data[i]);
 
-        //cout<<learner_Data[i]<<endl;
-
       }
 
-      string enc_data = paillier_utils->encryptParams(data);
 
+      string enc_data;
+      paillier_utils->maskParams(data, this->randomnessdir, iteration, enc_data);
       return py::bytes(enc_data);
 
     }
@@ -348,7 +339,7 @@ public:
   
 
   py::bytes computeWeightedAverage(py::list learners_Data,
-                                   py::list scalingFactors) {
+                                   py::list scalingFactors, int params) {
 
     //double elapsed_time_deserialize = 0.0;
     //double elapsed_time_pwa = 0.0;
@@ -382,9 +373,8 @@ public:
 
       }
 
-
-      string result = paillier_utils->calculate_homomorphic_sum(data, scaling_factors);
-
+      string result;
+      paillier_utils->sumMaskedParams(data, params, result);
       return py::bytes(result);
 
 
@@ -481,8 +471,8 @@ public:
     
   }
 
-  py::array_t<double> decrypt(string learner_Data,
-                              unsigned long int data_dimesions) {
+  py::array_t<double> decrypt( string learner_Data,
+                              unsigned long int data_dimesions, unsigned int iteration) {
 
     //double elapsed_time_deserialize = 0.0;
     //double elapsed_time_decrypt = 0.0;
@@ -490,22 +480,9 @@ public:
 
     if(scheme == "paillier"){
 
-      //cout<<learner_Data<<endl;
+      vector<double> dec_res;
 
-      //cout<<data_dimesions<<endl;
-
-      vector<double> dec_res = paillier_utils->decryptParams(learner_Data, data_dimesions);
-      //cout<<dec_res.size()<<endl;
-
-      //for(int i=0; i<dec_res.size(); i++){
-
-        //cout<<"this "<<dec_res[i]<<endl;
-
-     // }
-
-
-
-      
+      paillier_utils->unmaskParams(learner_Data, data_dimesions, this->randomnessdir, iteration, dec_res);
 
 
       auto result = py::array_t<double>(data_dimesions);
@@ -610,10 +587,16 @@ public:
 PYBIND11_MODULE(SHELFI_FHE, m) {
 
 py::class_<FHE_Helper>(m, "FHE_Helper")
-        .def(py::init<std::string &, usint, usint, int, std::string &>(),
+        .def(py::init<std::string &, usint, usint, int, std::string &, std::string &,  int, int, int>(),
                 py::arg("scheme") = py::str("ckks"), py::arg("batchSize") = 8192,
-                py::arg("scaleFactorBits") = 52, py::arg("learners") = 10, py::arg("cryptodir") = py::str("../resources/cryptoparams"))
+                py::arg("scaleFactorBits") = 52, py::arg("learners") = 10,
+                py::arg("cryptodir") = py::str("../resources/cryptoparams/"),
+                py::arg("randomnessdir") = py::str("../resources/random_params/"),
+                py::arg("modulus_bits") = 2048, py::arg("num_bits") = 17, py::arg("precision_bits") = 13)
       .def("load_crypto_params", &FHE_Helper::load_crypto_params)
+      .def("genPaillierRandOffline", &FHE_Helper::genPaillierRandOffline)
+      .def("addPaillierRandOffline", &FHE_Helper::addPaillierRandOffline)
+      .def("storePaillierRandSumOffline", &FHE_Helper::storePaillierRandSumOffline)
       .def("encrypt", &FHE_Helper::encrypt)
       .def("decrypt", &FHE_Helper::decrypt)
       .def("computeWeightedAverage", &FHE_Helper::computeWeightedAverage)

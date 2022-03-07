@@ -83,9 +83,7 @@ void PaillierUtils::load_keys(string keys_path){
 
 void PaillierUtils::genKeys(string keys_path){
 
-
 	paillier_keygen(this->modulusbits, &public_key, &private_key, paillier_get_rand_devurandom);
-
 
 	if(public_key == nullptr || private_key == nullptr){
 		cout<<"keys not initialized"<<endl;
@@ -95,7 +93,6 @@ void PaillierUtils::genKeys(string keys_path){
 
 	char* pub_key;
 	char* priv_key;
-
 
 	pub_key = paillier_pubkey_to_hex( public_key );
 	priv_key = paillier_prvkey_to_hex( private_key );
@@ -113,7 +110,6 @@ void PaillierUtils::genKeys(string keys_path){
 	    cout<<"Failed to write public key"<<endl;
 	}
 	fclose(pub_file);
-
 
 	string priv_path = keys_path;
 	priv_path+= "private_key-paillier.txt";
@@ -153,6 +149,7 @@ void PaillierUtils::scaleUpParams(const vector<double>& params, vector<unsigned 
 	clip(scaled_params, threshold);
 
 
+	#pragma omp parallel for
 	for(int i=0; i<params.size(); i++){
 
 		//changes all numbers to positive in the range 0-2^(num_rep_bits) - 1
@@ -337,6 +334,8 @@ void PaillierUtils::clip(std::vector<unsigned long int>& params, unsigned long i
 	//2^63
 	unsigned long int negativeNumCheck = 9223372036854775808U;
 
+
+	#pragma omp parallel for
 	for(int i=0; i<param_size; i++){
 
 		//if number is negative and ..
@@ -362,69 +361,56 @@ void PaillierUtils::clip(std::vector<unsigned long int>& params, unsigned long i
 
 
 
-string PaillierUtils::encryptParams(const std::vector<double>& params){
-
+void PaillierUtils::encryptParams(const std::vector<unsigned long int>& params, string& result){
 	
-	vector<unsigned long int> scaled_params;
 	vector<string> packed_params;
+	pack_params(params, packed_params);
 
+	vector<char*> enc_params;
+	enc_params.resize(packed_params.size());
 
-	scaleUpParams(params, scaled_params);
-	pack_params(scaled_params, packed_params);
-
-	scaled_params.clear();
-
-
-
-	string result="";
+	result="";
 	result.reserve(PAILLIER_BITS_TO_BYTES(public_key->bits) * 2 * packed_params.size());
 
-
-	//#pragma omp parallel for
+	#pragma omp parallel for
 	for(int i=0; i<packed_params.size(); i++){
 
 
 		CryptoPP::RDRAND prng;
 
-		
 		paillier_plaintext_t* pt1 = paillier_plaintext_from_bytes((void*)packed_params[i].c_str(), PAILLIER_BITS_TO_BYTES(public_key->bits));
 		paillier_ciphertext_t* ct1 = paillier_enc(NULL, public_key, pt1, get_rand);
 
-
-
 	    char* byteCt1 = (char*)paillier_ciphertext_to_bytes(PAILLIER_BITS_TO_BYTES(public_key->bits)*2, ct1);
 
-	    result.append(byteCt1, PAILLIER_BITS_TO_BYTES(public_key->bits)*2);
+	    enc_params[i] = byteCt1;
 
     	paillier_freeplaintext(pt1);
     	paillier_freeciphertext(ct1);
-    	free(byteCt1);
-
 
 	}
 
 
+	for(int i=0; i<enc_params.size(); i++){
 
-	return result;
+		result.append(enc_params[i], PAILLIER_BITS_TO_BYTES(public_key->bits)*2);
+		free(enc_params[i]);
+	}
+
 
 }
 
 
-std::vector<double> PaillierUtils::decryptParams(string ciphertext_arr, int total_params){
-
+void PaillierUtils::decryptParams(string& ciphertext_arr, int total_params, std::vector<unsigned long int>& result){
 
 
 	const char* ct_arr = ciphertext_arr.c_str();
 
 	vector<string> packed_params;
+	packed_params.resize(ciphertext_arr.size()/(PAILLIER_BITS_TO_BYTES(public_key->bits*2)));
 
-	packed_params.reserve(ciphertext_arr.size()/(PAILLIER_BITS_TO_BYTES(public_key->bits*2)));
-
-
-	//#pragma omp parallel for
+	#pragma omp parallel for
 	for(int i=0; i<ciphertext_arr.size(); i+=(PAILLIER_BITS_TO_BYTES(public_key->bits))*2){
-
-
 
 	    paillier_ciphertext_t* ct1 = paillier_ciphertext_from_bytes((void*)(ct_arr+i), PAILLIER_BITS_TO_BYTES(public_key->bits)*2);
 
@@ -432,22 +418,8 @@ std::vector<double> PaillierUtils::decryptParams(string ciphertext_arr, int tota
 
 		char* res_plain_ans = (char*) paillier_plaintext_to_bytes( PAILLIER_BITS_TO_BYTES(public_key->bits), dec_pt );
 
+		packed_params[i/((PAILLIER_BITS_TO_BYTES(public_key->bits))*2)] = string(res_plain_ans, PAILLIER_BITS_TO_BYTES(public_key->bits));
 
-		/*cout<<"Dec"<<endl;
-
-
-
-			for(int j=0; j<PAILLIER_BITS_TO_BYTES(public_key->bits); j++){
-
-				std::bitset<8> b(res_plain_ans[j]);
-				cout<<b; 
-			}
-
-			cout<<endl;*/
-
-
-
-		packed_params.push_back(string(res_plain_ans, PAILLIER_BITS_TO_BYTES(public_key->bits)));
 
 		paillier_freeplaintext(dec_pt);
     	paillier_freeciphertext(ct1);
@@ -455,38 +427,21 @@ std::vector<double> PaillierUtils::decryptParams(string ciphertext_arr, int tota
 
 	}
 
-	std::vector<unsigned long int> params;
-	std::vector<double> result_params;
 
-	params.reserve(total_params);
+	result.reserve(total_params);
+	unpack_params(packed_params,  result);
 
-
-	unpack_params(packed_params,  params);
-
-	params.resize(total_params);
+	result.resize(total_params);
 
 
-	scaleDownParams(params, result_params);
-
-
-	//averaging the sum
-	for(unsigned long int i=0; i<result_params.size(); i++){
-
-		result_params[i] = result_params[i]/totalLearners;
-
-
-	}
-
-
-	return result_params;
 
 
 }
 
 
-string PaillierUtils::calculate_homomorphic_sum(std::vector<string>& learner_params, std::vector<float>& scaling_factors){
+void PaillierUtils::calculate_homomorphic_sum(std::vector<string>& learner_params, string& result){
 
-	string result;
+	
 	result.resize(learner_params[0].size());
 	//const char* result_str = result.c_str();
 
@@ -497,6 +452,7 @@ string PaillierUtils::calculate_homomorphic_sum(std::vector<string>& learner_par
 
 		const char* L1 = learner_params[0].c_str();
 	    paillier_ciphertext_t* ct1 = paillier_ciphertext_from_bytes((void*)(L1+i), PAILLIER_BITS_TO_BYTES(public_key->bits)*2);
+
 
 
 		for(int j=1; j<learner_params.size(); j++){
@@ -529,6 +485,323 @@ string PaillierUtils::calculate_homomorphic_sum(std::vector<string>& learner_par
 	}
 
 
-	return result;
+	
 
 }
+
+
+
+
+
+
+void PaillierUtils::maskParams(std::vector<double>& params, string path, unsigned int iteration, string& result){
+
+	
+	string rand_path = path + to_string(iteration) + "/" + "learner_rand";
+	ifstream random_file(rand_path, std::ifstream::in);
+
+	if(!random_file.is_open()){
+
+		cout<<"Error opening randomness file"<<endl;
+		exit(EXIT_FAILURE);
+	}
+
+	unsigned long int N = pow(2,num_rep_bits);
+	unsigned long int scale = pow(2, precision_bits);
+	unsigned long int threshold = pow(2,num_rep_bits-1);
+
+	std::vector<unsigned long int> scaled_params; 
+	scaled_params.reserve(params.size());
+
+
+	//scale up to keep precision bits
+	for(unsigned long int i=0; i<params.size(); i++){
+
+		scaled_params.push_back((unsigned long int) (params[i] * scale) );
+
+	}
+
+
+	clip(scaled_params, threshold);
+
+	string value;
+
+	for(unsigned long int i=0; i<scaled_params.size(); i++){
+
+		getline(random_file, value, ' ');
+
+		scaled_params[i] = scaled_params[i] - atoll(value.c_str());
+		scaled_params[i] = scaled_params[i]%N;
+
+	}
+	
+
+	result.reserve(scaled_params.size()*10);
+
+	for(unsigned long int i=0; i<scaled_params.size(); i++){
+
+		result.append(to_string(scaled_params[i]));
+		result.append(";");
+
+	}
+
+
+}
+
+
+
+void PaillierUtils::sumMaskedParams(std::vector<string>& learner_params, unsigned long int params, string& result){
+
+
+	std::vector<unsigned long int> result_params;
+	result_params.resize(params,0);
+
+	char delim = ';';
+	
+
+    for(unsigned long int i=0; i<learner_params.size(); i++){
+
+    	int start_index = 0;
+    	int end_index = 0;
+    	int count = 0;
+
+    	for(unsigned long int j=0; j<learner_params[i].size(); j++){
+
+    		if(learner_params[i].at(end_index) == delim){
+
+    			string val_substr = learner_params[i].substr(start_index, end_index-start_index);
+    			result_params[count] = result_params[count] + atoll(val_substr.c_str());
+    			
+    			count++;
+    			end_index++;
+    			start_index = end_index;
+
+
+    		}
+
+    		else{
+
+    			end_index++;
+    		}
+
+    	}
+
+
+    }
+
+
+    unsigned long int N = pow(2,num_rep_bits);
+
+	
+	for(unsigned long int i=0; i<params; i++){
+
+		result_params[i] = result_params[i]%N;
+
+    }
+
+
+
+	result.reserve(result_params.size()*10);
+
+	for(unsigned long int i=0; i<result_params.size(); i++){
+
+		result.append(to_string(result_params[i]));
+		result.append(";");
+
+	}
+
+
+}
+
+
+
+
+void PaillierUtils::unmaskParams(string& learner_params, int params, string sum_random_path, unsigned int iteration, std::vector<double>& result){
+
+	
+	unsigned long int N = pow(2,num_rep_bits);
+
+	string rand_path = sum_random_path + to_string(iteration) + "/" + "learner_rand_sum";
+	ifstream random_file(rand_path, std::ifstream::in);
+
+	if(!random_file.is_open()){
+
+		cout<<"Error opening randomness file"<<endl;
+		exit(EXIT_FAILURE);
+	}
+
+
+	std::vector<unsigned long int> scaled_params;
+	scaled_params.reserve(params);
+
+	result.reserve(params);
+	
+
+	char delim = ';';
+	int start_index = 0;
+	int end_index = 0;
+
+	for(unsigned long int j=0; j<learner_params.size(); j++){
+
+		if(learner_params.at(end_index) == delim){
+
+			string val_substr = learner_params.substr(start_index, end_index-start_index);
+			scaled_params.push_back(atoll(val_substr.c_str())); 
+			
+			end_index++;
+			start_index = end_index;
+
+		}
+
+		else{
+
+			end_index++;
+		}
+
+	}
+
+	
+	string value;
+
+	for(unsigned long int i=0; i<params; i++){
+
+		getline(random_file, value, ' ');
+
+		double decimalValue;
+
+		scaled_params[i] = scaled_params[i] + atoll(value.c_str());
+		scaled_params[i] = scaled_params[i]%N;
+
+
+		if(isNumNegative(scaled_params[i])){
+                
+            decimalValue = calculateTwosCompliment(scaled_params[i]);
+            decimalValue = -1 * decimalValue/pow(2,precision_bits);
+
+        }
+        else{
+            
+            decimalValue = scaled_params[i];
+            decimalValue = decimalValue/pow(2,precision_bits);
+
+        }
+
+
+		result.push_back(decimalValue/totalLearners);
+
+
+	}
+
+	random_file.close();
+	
+
+
+}
+
+
+
+void PaillierUtils::getEncryptedRandomness(string path, unsigned long int params, unsigned int iteration, string& result){
+
+	unsigned long int N = pow(2,num_rep_bits);
+	CryptoPP::AutoSeededRandomPool rng;
+	std::vector<unsigned long int> rand_nums;
+	rand_nums.reserve(params);
+
+
+	struct stat st;
+
+	if(stat(path.c_str(),&st) != 0){
+        	if (mkdir(path.c_str(), 0777) == -1)
+        		cerr << "Error creating directory for output:  " << strerror(errno) << endl;
+    }
+
+	
+	string path_folder = path+to_string(iteration)+"/";
+
+
+	if(stat(path_folder.c_str(),&st) != 0){
+        	if (mkdir(path_folder.c_str(), 0777) == -1)
+        		cerr << "Error creating directory for output:  " << strerror(errno) << endl;
+    }
+
+
+    string path_name = path_folder + "learner_rand";
+
+    FILE *rand_file = fopen(path_name.c_str(), "w"); 
+
+    string rand_nums_str = "";
+    rand_nums_str.reserve(params * 10);
+
+
+	for(unsigned long int i=0; i<params; i++){
+
+		CryptoPP::Integer rand_num_int = CryptoPP::Integer(rng, num_rep_bits);
+		unsigned long int rand_num = (unsigned long int) rand_num_int.ConvertToLong();
+		rand_num = rand_num%N;
+
+		rand_nums.push_back(rand_num);
+
+		rand_nums_str.append(to_string(rand_num));
+		rand_nums_str.append(" ");
+
+
+	}
+
+
+	fputs(rand_nums_str.c_str(), rand_file);
+	fclose(rand_file);
+
+
+	encryptParams(rand_nums, result);
+
+
+}
+
+
+
+
+void PaillierUtils::addEncryptedRandomness(std::vector<string>& encrypted_rand_learners, string& result){
+
+	calculate_homomorphic_sum(encrypted_rand_learners, result);
+
+}
+
+
+void PaillierUtils::decryptRandomnessSum(string& enc_rand_sum, string path, unsigned long int params, unsigned int iteration){
+
+
+	std::vector<unsigned long int> result;
+	unsigned long int N = pow(2,num_rep_bits);
+
+	decryptParams(enc_rand_sum, params, result);
+
+
+	string path_folder = path+to_string(iteration) +"/";
+	string sum_rand_path = path_folder + "learner_rand_sum";
+
+
+	struct stat st;
+	
+	if(stat(path_folder.c_str(),&st) != 0){
+        	if (mkdir(path_folder.c_str(), 0777) == -1)
+        		cerr << "Error creating directory for output:  " << strerror(errno) << endl;
+    }
+
+
+	FILE* rand_sum_file = fopen(sum_rand_path.c_str(), "w");
+
+
+	for(unsigned int i=0; i<result.size(); i++){
+
+		result[i] = result[i]%N;
+
+		fputs(to_string(result[i]).c_str(), rand_sum_file);
+		fputs(" ", rand_sum_file);	
+
+	}
+
+	fclose(rand_sum_file);
+
+
+}
+
