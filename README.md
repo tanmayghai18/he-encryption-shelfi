@@ -15,7 +15,7 @@ Benchmarking for various crypto-systems (e.g. Pailler, CKKS) integrated with a f
 
 - `pybind-11`: pip install pybind11, make sure to have have `python3` and `cmake` already installed. 
 
-palisade_pybind folder contains the implementation of weighted average operation with python bindings.
+`palisade_pybind` folder contains the implementation of weighted average operation with python bindings.
 
 ### To Run
 
