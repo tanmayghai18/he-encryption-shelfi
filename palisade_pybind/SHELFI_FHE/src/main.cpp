@@ -228,7 +228,7 @@ public:
       vector<double> data;
       data.reserve(size);
 
-      for(int i=0; i<size; i++){
+      for(unsigned int i=0; i<size; i++){
 
         data.push_back(learner_Data[i]);
 

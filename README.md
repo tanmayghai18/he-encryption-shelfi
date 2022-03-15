@@ -1,30 +1,27 @@
 # he-encryption-shelfi
 
-This repo contains scripts for benchmarking the BGN, Pailler, BGVrns, and CKKS crypto-systems. 
+Benchmarking for various crypto-systems (e.g. Pailler, CKKS) integrated with a federated learning architecture
 
+`FHE_CPP`: cpp only implementation for CKKS 
+
+`Pailler_Offline_Online_CPP`: cpp only implementation for Pailler (offline + online)
+
+`palisade_pybind`: implementation of private weighted average integrated with underlying schemes with python wrapper and bindings. 
+
+### Dependencies (tested on Ubuntu based linux systems)
+- `PALISADE`: a lattice-based homomorphic encryption library in C++. Follow the instructions on https://gitlab.com/palisade/palisade-release to download, compile, and install the library. Make sure to run `make install` in the user-created `\build` directory for a complete installation. 
+
+- `Crypto++`: a Linux cryptographic library to provide various functionality (we primarily utilize this for our Pailler implementation). Follow the instructions https://github.com/weidai11/cryptopp and make sure to run `make install` in the root dir. of the library for a complete install.
+
+- `pybind-11`: pip install pybind11, make sure to have have `python3` and `cmake` already installed. 
 
 palisade_pybind folder contains the implementation of weighted average operation with python bindings.
 
-To run this:
+### To Run
 
-Install Palisades and Pybind11.
+go to the `palisade_pybind/SHELFI_FHE/src` folder and run `pip install ../`
 
-Then open terminal in the palisade_pybind/SHELFI_FHE/src folder and install the library as:
+Tests are located in the `../tests` directory (relative to dir. above) and can be run by simply running:
 
-pip install ../
+`python3 ../tests/test.py`
 
-Then you can test the library using a sample python script in SHELFI_FHE/tests/test.py as:
-
-python3 ../tests/test.py
-
-
-palisade_shelfi_interface folder contains the normal C++ implementation of the weighted average computation which make be compiled using cmake.
-
-
-Each folder contains a script (run.sh) to download/install all dependencies and run evaluation scripts.
-
-BGN -> Makefile project, use run.sh to compile and run for evaluation
-
-PaillerCPP -> Makefile project, use run.sh to compile and run for evaluation
-
-palisades -> CMake project, run.sh downloads and installs palisade-developement from a gitlab repo, installs various dependencies and libraries used for evaluation (i.e. cnpy), and runs for evaluation

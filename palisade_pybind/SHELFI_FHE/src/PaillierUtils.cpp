@@ -22,7 +22,7 @@ void PaillierUtils::load_keys(string keys_path){
 
 
 	if (file!=NULL){
-
+		
 		fseek(file, 0, SEEK_END);
 		fsize = ftell(file);
 		fseek(file, 0, SEEK_SET);
@@ -76,6 +76,8 @@ void PaillierUtils::load_keys(string keys_path){
 		cout<<"Error reading private key"<<endl;
 
 	}
+	
+	cout << result << endl;
 
 
 }
@@ -139,7 +141,7 @@ void PaillierUtils::scaleUpParams(const vector<double>& params, vector<unsigned 
 
 
 	//scale up to keep precision bits
-	for(int i=0; i<params.size(); i++){
+	for(unsigned int i=0; i<params.size(); i++){
 
 		scaled_params.push_back((unsigned long int) (params[i] * scale) );
 
@@ -150,7 +152,7 @@ void PaillierUtils::scaleUpParams(const vector<double>& params, vector<unsigned 
 
 
 	#pragma omp parallel for
-	for(int i=0; i<params.size(); i++){
+	for(unsigned int i=0; i<params.size(); i++){
 
 		//changes all numbers to positive in the range 0-2^(num_rep_bits) - 1
 		scaled_params[i] = scaled_params[i]+threshold;
@@ -169,7 +171,7 @@ void PaillierUtils::scaleDownParams(vector<unsigned long int>& scaled_params, ve
 	double scale = pow(2, precision_bits);
 
 
-	for(int i=0; i<scaled_params.size(); i++){
+	for(unsigned int i=0; i<scaled_params.size(); i++){
 
 		params.push_back(scaled_params[i]);
 
@@ -209,10 +211,10 @@ void PaillierUtils::pack_params(const std::vector<unsigned long int>& params, st
 	packed_params.resize(packed_params_size, "");
 
 
-	int count_params = 0;
+	unsigned int count_params = 0;
 
 	//starting byte index to copy the number from
-	int num_start_byte = bytes_to_rep_num -1;
+	unsigned int num_start_byte = bytes_to_rep_num -1;
 	if(num_start_byte> sizeof(unsigned long int)-1){
 		cout<<"Error: Number representation greater than unsigned long int."<<endl;
 		return;
@@ -283,7 +285,7 @@ void PaillierUtils::unpack_params(std::vector<std::string>& packed_params, std::
 		extra_bytes_to_pad = PAILLIER_BITS_TO_BYTES(extra_padding_bits);
 	} 
 
-	int total_size_num = bytes_to_rep_num + extra_bytes_to_pad;
+	unsigned int total_size_num = bytes_to_rep_num + extra_bytes_to_pad;
 
 	if(total_size_num > sizeof(unsigned long int)){
 		cout<<"Error: Number representation greater than unsigned long int."<<endl;
@@ -296,7 +298,7 @@ void PaillierUtils::unpack_params(std::vector<std::string>& packed_params, std::
 
 	for(int i=0; i<packed_params_size; i++){
 
-		for(int j=0; j<packed_params[i].size(); j+=total_size_num){
+		for(unsigned int j=0; j<packed_params[i].size(); j+=total_size_num){
 
 			if(j+total_size_num > packed_params[i].size()){
 
@@ -307,7 +309,7 @@ void PaillierUtils::unpack_params(std::vector<std::string>& packed_params, std::
 			char* a_ptr = (char*)& num;
 
 
-			for(int k=0; k<total_size_num; k++)
+			for(unsigned int k=0; k<total_size_num; k++)
 			{
 
 				a_ptr[total_size_num-1-k] = packed_params[i][j+k];
@@ -373,7 +375,7 @@ void PaillierUtils::encryptParams(const std::vector<unsigned long int>& params, 
 	result.reserve(PAILLIER_BITS_TO_BYTES(public_key->bits) * 2 * packed_params.size());
 
 	#pragma omp parallel for
-	for(int i=0; i<packed_params.size(); i++){
+	for(unsigned int i=0; i<packed_params.size(); i++){
 
 
 		CryptoPP::RDRAND prng;
@@ -391,7 +393,7 @@ void PaillierUtils::encryptParams(const std::vector<unsigned long int>& params, 
 	}
 
 
-	for(int i=0; i<enc_params.size(); i++){
+	for(unsigned int i=0; i<enc_params.size(); i++){
 
 		result.append(enc_params[i], PAILLIER_BITS_TO_BYTES(public_key->bits)*2);
 		free(enc_params[i]);
@@ -410,7 +412,7 @@ void PaillierUtils::decryptParams(string& ciphertext_arr, int total_params, std:
 	packed_params.resize(ciphertext_arr.size()/(PAILLIER_BITS_TO_BYTES(public_key->bits*2)));
 
 	#pragma omp parallel for
-	for(int i=0; i<ciphertext_arr.size(); i+=(PAILLIER_BITS_TO_BYTES(public_key->bits))*2){
+	for(unsigned int i=0; i<ciphertext_arr.size(); i+=(PAILLIER_BITS_TO_BYTES(public_key->bits))*2){
 
 	    paillier_ciphertext_t* ct1 = paillier_ciphertext_from_bytes((void*)(ct_arr+i), PAILLIER_BITS_TO_BYTES(public_key->bits)*2);
 
@@ -447,7 +449,7 @@ void PaillierUtils::calculate_homomorphic_sum(std::vector<string>& learner_param
 
 
 	#pragma omp parallel for 
-	for(int i=0; i<learner_params[0].size(); i+= (PAILLIER_BITS_TO_BYTES(public_key->bits*2))){
+	for(unsigned int i=0; i<learner_params[0].size(); i+= (PAILLIER_BITS_TO_BYTES(public_key->bits*2))){
 
 
 		const char* L1 = learner_params[0].c_str();
@@ -455,7 +457,7 @@ void PaillierUtils::calculate_homomorphic_sum(std::vector<string>& learner_param
 
 
 
-		for(int j=1; j<learner_params.size(); j++){
+		for(unsigned int j=1; j<learner_params.size(); j++){
 
 			const char* Ln = learner_params[j].c_str();
 	    	paillier_ciphertext_t* ctn = paillier_ciphertext_from_bytes((void*)(Ln+i), PAILLIER_BITS_TO_BYTES(public_key->bits)*2);
@@ -471,7 +473,7 @@ void PaillierUtils::calculate_homomorphic_sum(std::vector<string>& learner_param
 		int count_ct=0;
 
 
-		for(int k =i; k<i+PAILLIER_BITS_TO_BYTES(public_key->bits)*2; k++){
+		for(unsigned int k =i; k<i+PAILLIER_BITS_TO_BYTES(public_key->bits)*2; k++){
 
 
 			result[k] = byteCt[count_ct++];
@@ -663,7 +665,7 @@ void PaillierUtils::unmaskParams(string& learner_params, int params, string sum_
 	
 	string value;
 
-	for(unsigned long int i=0; i<params; i++){
+	for(long int i=0; i<params; i++){
 
 		getline(random_file, value, ' ');
 
