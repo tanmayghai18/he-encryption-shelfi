@@ -8,10 +8,12 @@
 class Scheme {
 
 private:
-     int totalLearners;
+    string scheme;
+    int totalLearners;
 
 public:
-    Scheme(int learners) {
+    Scheme(string scheme, int learners) {
+        this->scheme = scheme;
         this->totalLearners = learners;
     }
 
@@ -23,8 +25,12 @@ public:
     virtual py::bytes computeWeightedAverage(py::list learners_Data, py::list scalingFactors, int params);
 };
 
-py::class_<FHE_Helper>(m, "Scheme")
-        .def(int, py::arg("learners") = 10)
+PYBIND11_MODULE(SHELFI_FHE, m) {
+
+py::class_<Scheme>(m, "Scheme")
+        .def(py::init<std::string &, int>(),
+            py::arg("scheme") = py::str(""),
+            py::arg("learners") = 10),
         .def("loadCryptoParams", &Scheme::loadCryptoParams)
         .def("genCryptoContextAndKeyGen", &Scheme:genCryptoContextAndKeyGen)
         .def("encrypt", &Scheme::encrypt)
@@ -44,3 +50,5 @@ py::class_<FHE_Helper>(m, "Scheme")
 #else
   m.attr("__version__") = "dev";
 #endif
+
+}
