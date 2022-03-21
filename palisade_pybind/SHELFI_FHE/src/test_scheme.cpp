@@ -15,12 +15,12 @@ namespace py = pybind11;
 class TestScheme : public Scheme {
 
 private:
-	usint batchSize;
-	usint scaleFactorBits;
+	int batchSize;
+	int scaleFactorBits;
 	string cryptodir;
 
 public:
-	TestScheme(usint batchSize, usint scaleFactorBits, string cryptodir) {
+	TestScheme(int batchSize, int scaleFactorBits, string cryptodir) {
 		this->batchSize = batchSize;
 		this->scaleFactorBits = scaleFactorBits;
 		this->cryptodir = cryptodir;

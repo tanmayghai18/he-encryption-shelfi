@@ -36,7 +36,7 @@ py::class_<Scheme>(m, "Scheme")
             py::arg("scheme") = py::str(""),
             py::arg("learners") = 10)
         .def("loadCryptoParams", &Scheme::loadCryptoParams)
-        .def("genCryptoContextAndKeyGen", &Scheme:genCryptoContextAndKeyGen)
+        .def("genCryptoContextAndKeyGen", &Scheme::genCryptoContextAndKeyGen)
         .def("encrypt", &Scheme::encrypt)
         .def("computeWeightedAverage", &Scheme::computeWeightedAverage)
         .def("decrypt", &Scheme::decrypt);
