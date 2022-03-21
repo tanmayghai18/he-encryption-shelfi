@@ -34,7 +34,7 @@ PYBIND11_MODULE(SHELFI_FHE, m) {
 py::class_<Scheme>(m, "Scheme")
         .def(py::init<std::string &, int>(),
             py::arg("scheme") = py::str(""),
-            py::arg("learners") = 10),
+            py::arg("learners") = 10)
         .def("loadCryptoParams", &Scheme::loadCryptoParams)
         .def("genCryptoContextAndKeyGen", &Scheme:genCryptoContextAndKeyGen)
         .def("encrypt", &Scheme::encrypt)
