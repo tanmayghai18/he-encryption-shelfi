@@ -46,10 +46,10 @@ py::class_<Scheme>(m, "Scheme")
            :toctree: _generate
     )pbdoc";
 
-#ifdef VERSION_INFO
-  m.attr("__version__") = MACRO_STRINGIFY(VERSION_INFO);
-#else
-  m.attr("__version__") = "dev";
-#endif
+// #ifdef VERSION_INFO
+//   m.attr("__version__") = MACRO_STRINGIFY(VERSION_INFO);
+// #else
+//   m.attr("__version__") = "dev";
+// #endif
 
 }
