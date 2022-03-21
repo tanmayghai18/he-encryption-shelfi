@@ -8,6 +8,7 @@
 
 #define STRINGIFY(x) #x
 #define MACRO_STRINGIFY(x) STRINGIFY(x)
+namespace py = pybind11;
 
 class Scheme {
 
