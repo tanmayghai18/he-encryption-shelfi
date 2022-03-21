@@ -5,6 +5,7 @@
 #include <pybind11/stl.h>
 #include <pybind11/numpy.h>
 #include <omp.h>
+#include <scheme.h>
 
 #define STRINGIFY(x) #x
 #define MACRO_STRINGIFY(x) STRINGIFY(x)
