@@ -27,7 +27,6 @@ public:
     py::bytes encrypt(py::array_t<double> data_array, unsigned int iteration);
     py::bytes computeWeightedAverage(py::list learners_Data, py::list scalingFactors, int params);
     py::array_t<double> decrypt( string learner_Data, unsigned long int data_dimesions, unsigned int iteration);
-    py::bytes computeWeightedAverage(py::list learners_Data, py::list scalingFactors, int params);
 };
 
 PYBIND11_MODULE(SHELFI_FHE, m) {
