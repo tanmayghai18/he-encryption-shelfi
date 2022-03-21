@@ -14,19 +14,19 @@ class Scheme {
 
 private:
     string scheme;
-    int totalLearners;
+    int learners;
 
 public:
     Scheme(string scheme, int learners) {
         this->scheme = scheme;
-        this->totalLearners = learners;
+        this->learners = learners;
     }
 
     void loadCryptoParams();
     void genCryptoContextAndKeyGen();
     py::bytes encrypt(py::array_t<double> data_array, unsigned int iteration);
-    py::bytes computeWeightedAverage(py::list learners_Data, py::list scalingFactors, int params);
-    py::array_t<double> decrypt( string learner_Data, unsigned long int data_dimesions, unsigned int iteration);
+    py::bytes computeWeightedAverage(py::list learners_data, py::list scaling_factors, int params);
+    py::array_t<double> decrypt( string learner_data, unsigned long int data_dimensions, unsigned int iteration);
 };
 
 PYBIND11_MODULE(SHELFI_FHE, m) {
@@ -34,12 +34,12 @@ PYBIND11_MODULE(SHELFI_FHE, m) {
 py::class_<Scheme>(m, "Scheme")
         .def(py::init<std::string &, int>(),
             py::arg("scheme") = py::str(""),
-            py::arg("learners") = 10);
+            py::arg("learners") = 10),
         .def("loadCryptoParams", &Scheme::loadCryptoParams)
         .def("genCryptoContextAndKeyGen", &Scheme:genCryptoContextAndKeyGen)
         .def("encrypt", &Scheme::encrypt)
-        .def("decrypt", &Scheme::decrypt)
-        .def("computeWeightedAverage", &Scheme::computeWeightedAverage);
+        .def("computeWeightedAverage", &Scheme::computeWeightedAverage)
+        .def("decrypt", &Scheme::decrypt);
 
   m.doc() = R"pbdoc(
         Pybind11 example plugin
