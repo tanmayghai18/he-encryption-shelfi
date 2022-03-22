@@ -46,8 +46,6 @@ py::class_<Paillier, Scheme>(m, "Paillier")
       .def("decrypt", &Paillier::decrypt)
       .def("computeWeightedAverage", &Paillier::computeWeightedAverage);
 
-m.def("paillier_get_rand_devrandom", &paillier_get_rand_devrandom);
-
 m.doc() = R"pbdoc(
       Pybind11 example plugin
       -----------------------
