@@ -4,7 +4,7 @@
 #include <pybind11/stl.h>
 #include <pybind11/numpy.h>
 
-#include "../src/scheme.cpp"
+#include "../src/scheme.h"
 #include "../src/ckks.cpp"
 
 #define STRINGIFY(x) #x
