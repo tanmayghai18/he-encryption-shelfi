@@ -4,8 +4,8 @@
 #include <pybind11/stl.h>
 #include <pybind11/numpy.h>
 
-#include "scheme.cpp"
-#include "ckks.cpp"
+#include "../src/scheme.cpp"
+#include "../src/ckks.cpp"
 
 #define STRINGIFY(x) #x
 #define MACRO_STRINGIFY(x) STRINGIFY(x)
