@@ -19,7 +19,6 @@ private:
 	string cryptodir;
 
 public:
-  using Scheme::Scheme;
 
 	Ckks(int batchSize, int scaleFactorBits, string cryptodir) {
 		this->batchSize = batchSize;
@@ -235,7 +234,7 @@ public:
 
 PYBIND11_MODULE(SHELFI_FHE, m) {
 
-py::class_<Scheme, Ckks>(m, "Ckks")
+py::class_<Ckks, Scheme>(m, "Ckks")
 		.def(py::init<int, int, int, std::string &>(),
                 py::arg("batchSize") = 8192, 
                 py::arg("scaleFactorBits") = 52, 
