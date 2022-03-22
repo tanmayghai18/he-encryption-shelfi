@@ -5,7 +5,7 @@
 #include <pybind11/numpy.h>
 
 #include "scheme.cpp"
-// #include "ckks.cpp"
+#include "ckks.cpp"
 
 #define STRINGIFY(x) #x
 #define MACRO_STRINGIFY(x) STRINGIFY(x)
@@ -15,18 +15,18 @@ PYBIND11_MODULE(SHELFI_FHE, m) {
 
 py::class_<Scheme>(m, "Scheme");
 
-// py::class_<Ckks, Scheme>(m, "Ckks")
-//         .def(py::init<std::string &, int, int, int, std::string &>(),
-//             py::arg("scheme") = py::str("ckks"),
-//             py::arg("learners") = 10,
-//             py::arg("batchSize") = 8192, 
-//             py::arg("scaleFactorBits") = 52, 
-//             py::arg("cryptodir") = py::str("../resources/cryptoparams/"))
-//       .def("loadCryptoParams", &Ckks::loadCryptoParams)
-//       .def("genCryptoContextAndKeyGen", &Ckks::genCryptoContextAndKeyGen)
-//       .def("encrypt", &Ckks::encrypt)
-//       .def("decrypt", &Ckks::decrypt)
-//       .def("computeWeightedAverage", &Ckks::computeWeightedAverage);
+py::class_<Ckks, Scheme>(m, "Ckks")
+        .def(py::init<std::string &, int, int, int, std::string &>(),
+            py::arg("scheme") = py::str("ckks"),
+            py::arg("learners") = 10,
+            py::arg("batchSize") = 8192, 
+            py::arg("scaleFactorBits") = 52, 
+            py::arg("cryptodir") = py::str("../resources/cryptoparams/"))
+      .def("loadCryptoParams", &Ckks::loadCryptoParams)
+      .def("genCryptoContextAndKeyGen", &Ckks::genCryptoContextAndKeyGen)
+      .def("encrypt", &Ckks::encrypt)
+      .def("decrypt", &Ckks::decrypt)
+      .def("computeWeightedAverage", &Ckks::computeWeightedAverage);
 
   m.doc() = R"pbdoc(
         Pybind11 example plugin
