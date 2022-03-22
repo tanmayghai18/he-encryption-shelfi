@@ -6,6 +6,8 @@
 
 #include <omp.h>
 
+#include "../src/ckks.cpp"
+
 #define STRINGIFY(x) #x
 #define MACRO_STRINGIFY(x) STRINGIFY(x)
 namespace py = pybind11;
