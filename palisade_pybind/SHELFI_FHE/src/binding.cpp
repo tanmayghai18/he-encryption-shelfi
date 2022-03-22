@@ -24,7 +24,7 @@ py::class_<Scheme>(m, "Scheme")
         .def("decrypt", &Scheme::decrypt);
 
 py::class_<Ckks, Scheme>(m, "Ckks")
-        .def(py::init<int, int, int, std::string &>(),
+        .def(py::init<std::string &, int>(),
                 py::arg("scheme") = py::str("ckks"),
                 py::arg("learners") = 10);
                 // py::arg("batchSize") = 8192, 
