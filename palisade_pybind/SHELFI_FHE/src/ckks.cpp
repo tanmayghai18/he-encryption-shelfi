@@ -19,11 +19,10 @@ private:
 	string cryptodir;
 
 public:
-	Ckks(int learners, usint batchSize, usint scaleFactorBits, string cryptodir) {
+	Ckks(int batchSize, int scaleFactorBits, string cryptodir) {
 		this->batchSize = batchSize;
 		this->scaleFactorBits = scaleFactorBits;
 		this->cryptodir = cryptodir;
-		this->totalLearners = learners;
 	}
 
 	void loadCryptoParams() override {
@@ -244,7 +243,7 @@ py::class_<Ckks>(m, "Ckks")
       .def("genCryptoContextAndKeyGen", &Ckks:genCryptoContextAndKeyGen)
       .def("encrypt", &Ckks::encrypt)
       .def("decrypt", &Ckks::decrypt)
-      .def("computeWeightedAverage", &Ckks::computeWeightedAverage)
+      .def("computeWeightedAverage", &Ckks::computeWeightedAverage);
 
   m.doc() = R"pbdoc(
         Pybind11 example plugin
