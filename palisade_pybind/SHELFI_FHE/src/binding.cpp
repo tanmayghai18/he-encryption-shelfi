@@ -23,13 +23,13 @@ py::class_<Scheme>(m, "Scheme")
         .def("computeWeightedAverage", &Scheme::computeWeightedAverage)
         .def("decrypt", &Scheme::decrypt);
 
-// py::class_<Ckks, Scheme>(m, "Ckks")
-//         .def(py::init<int, int, int, std::string &>(),
-//                 py::arg("batchSize") = 8192, 
-//                 py::arg("scaleFactorBits") = 52, 
-//                 py::arg("cryptodir") = py::str("../resources/cryptoparams/"))
-//       .def("loadCryptoParams", &Ckks::loadCryptoParams)
-//       .def("genCryptoContextAndKeyGen", &Ckks::genCryptoContextAndKeyGen);
+py::class_<Ckks, Scheme>(m, "Ckks")
+        .def(py::init<int, int, int, std::string &>(),
+                py::arg("batchSize") = 8192, 
+                py::arg("scaleFactorBits") = 52, 
+                py::arg("cryptodir") = py::str("../resources/cryptoparams/"));
+      // .def("loadCryptoParams", &Ckks::loadCryptoParams)
+      // .def("genCryptoContextAndKeyGen", &Ckks::genCryptoContextAndKeyGen);
       // .def("encrypt", &Ckks::encrypt)
       // .def("decrypt", &Ckks::decrypt)
       // .def("computeWeightedAverage", &Ckks::computeWeightedAverage);
