@@ -235,7 +235,4 @@ public:
       	result_ciphertext.clear();
       	return res;
 	}
-
 };
-
-

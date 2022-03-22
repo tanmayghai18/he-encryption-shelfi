@@ -1,4 +1,3 @@
-#include "PaillierUtils.h"
 #include <pybind11/complex.h>
 #include <pybind11/pybind11.h>
 #include <pybind11/pytypes.h>
@@ -7,6 +6,8 @@
 #include <omp.h>
 #include <scheme.h>
 
+#include "PaillierUtils.h"
+
 #define STRINGIFY(x) #x
 #define MACRO_STRINGIFY(x) STRINGIFY(x)
 namespace py = pybind11;
@@ -14,13 +15,25 @@ namespace py = pybind11;
 class Pailler : public Scheme {
 
 private:
-
+	string scheme;
+	int learners; 
+	
 	int modulus_bits;
 	int num_bits;
 	int precision_bits;
+	string cryptodir;
 	string randomnessdir;
 
 	PaillerUtils* pailler_utils = nullptr;
+
+public:
+	Pailler(string scheme, int learners, int modulus_bits, int num_bits, int precision_bits, string cryptodir, string randomnessdir) : Scheme(scheme, learners) {
+		this->modulus_bits = modulus_bits;
+		this->num_bits = num_bits;
+		this->precision_bits = precision_bits;
+		this->cryptodir = cryptodir;
+		this->randomnessdir = randomnessdir;
+	}
 
 	py::bytes genPaillierRandOffline( unsigned long int params, unsigned int iteration) {
 		string result = "";
@@ -39,17 +52,7 @@ private:
 	    paillier_utils->addEncryptedRandomness(data, result);
 	    return py::bytes(result);
 
-  	}
-
-
-public:
-	Pailler(int learners, string cryptodir, string randomnessdir, int modulus_bits, int num_bits, int precision_bits) {
-		this->modulus_bits = modulus_bits;
-		this->num_bits = num_bits;
-		this->precision_bits = precision_bits;
-		this->randomnessdir = randomnessdir;
-		this->totalLearners = learners;
-	}
+  }
 
 
 	void loadCryptoParams() override {
@@ -121,38 +124,3 @@ public:
 		return py::bytes(result);
 	}
 };
-
-
-PYBIND11_MODULE(SHELFI_FHE, m) {
-
-py::class_<Pailler>(m, "Pailler")
-		.def(py::init<int, std::string &, std::string &, int, int, int>(),
-                py::arg("learners") = 10,
-                py::arg("cryptodir") = py::str("../resources/cryptoparams/"),
-                py::arg("randomnessdir") = py::str("../resources/random_params/"),
-                py::arg("modulus_bits") = 2048, 
-                py::arg("num_bits") = 17, 
-                py::arg("precision_bits") = 13)
-      .def("genPaillierRandOffline", &Pailler::genPaillierRandOffline)
-      .def("addPaillierRandOffline", &Pailler::addPaillierRandOffline)
-      .def("loadCryptoParams", &Pailler::loadCryptoParams)
-      .def("genCryptoContextAndKeyGen", &Pailler:genCryptoContextAndKeyGen)
-      .def("encrypt", &Pailler::encrypt)
-      .def("decrypt", &Pailler::decrypt)
-      .def("computeWeightedAverage", &Pailler::computeWeightedAverage)
-
-  m.doc() = R"pbdoc(
-        Pybind11 example plugin
-        -----------------------
-        .. currentmodule:: cmake_example
-        .. autosummary::
-           :toctree: _generate
-    )pbdoc";
-
-#ifdef VERSION_INFO
-  m.attr("__version__") = MACRO_STRINGIFY(VERSION_INFO);
-#else
-  m.attr("__version__") = "dev";
-#endif
-
-}
