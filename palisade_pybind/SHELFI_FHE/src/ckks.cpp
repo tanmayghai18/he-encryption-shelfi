@@ -19,8 +19,7 @@ namespace py = pybind11;
 using namespace std;
 using namespace lbcrypto;
 
-// class Ckks : public Scheme {
-class Ckks {
+class Ckks : public Scheme {
 
 private:
   string scheme;
@@ -35,13 +34,13 @@ private:
   LPPrivateKey<DCRTPoly> sk;
 
 public:
-	Ckks(string scheme, int learners, int batchSize, int scaleFactorBits, string cryptodir) {
+	Ckks(string scheme, int learners, int batchSize, int scaleFactorBits, string cryptodir) : Scheme(scheme, learners) {
     this->batchSize = batchSize;
     this->scaleFactorBits = scaleFactorBits;
     this->cryptodir = cryptodir;
   }
 
-	void loadCryptoParams() {
+	void loadCryptoParams() override {
 		    if (!Serial::DeserializeFromFile(cryptodir + "cryptocontext.txt", cc, SerType::BINARY)) {
         	std::cout << "Could not read serialization from " << cryptodir + "cryptocontext.txt" << std::endl;
       	}
@@ -55,7 +54,7 @@ public:
       	}
 	}
 
-	int genCryptoContextAndKeyGen() {
+	int genCryptoContextAndKeyGen() override {
         usint multDepth = 1;
         CryptoContext<DCRTPoly> cryptoContext = CryptoContextFactory<DCRTPoly>::genCryptoContextCKKS(multDepth, scaleFactorBits, batchSize);
         // enable features that you wish to use
@@ -88,7 +87,7 @@ public:
         return 1;
 	}
 
-	py::bytes encrypt(py::array_t<double> data_array, unsigned int iteration) {
+	py::bytes encrypt(py::array_t<double> data_array, unsigned int iteration) override {
         unsigned long int size = data_array.size();
         auto learner_Data = data_array.data();
 
@@ -133,7 +132,7 @@ public:
         return res;
 	}
 
-	py::array_t<double> decrypt(string learner_Data, unsigned long int data_dimesions, unsigned int iteration) {
+	py::array_t<double> decrypt(string learner_Data, unsigned long int data_dimesions, unsigned int iteration) override {
 		    //auto start_deserialize = std::chrono::system_clock::now();
       	const SerType::SERBINARY st;
       	stringstream ss(learner_Data);
@@ -179,7 +178,7 @@ public:
     } 
 	
 
-	py::bytes computeWeightedAverage(py::list learners_Data, py::list scalingFactors, int params) {
+	py::bytes computeWeightedAverage(py::list learners_Data, py::list scalingFactors, int params) override {
         if (learners_Data.size() != scalingFactors.size()) {
       		cout << "Error: learners_Data and scalingFactors size mismatch" << endl;
         	return "";

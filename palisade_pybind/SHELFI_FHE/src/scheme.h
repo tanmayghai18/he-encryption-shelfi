@@ -1,3 +1,6 @@
+#ifndef SCHEME_H
+#define SCHEME_H
+
 #include <pybind11/complex.h>
 #include <pybind11/pybind11.h>
 #include <pybind11/pytypes.h>
@@ -24,3 +27,5 @@ public:
     virtual py::bytes computeWeightedAverage(py::list learners_data, py::list scaling_factors, int params);
     virtual py::array_t<double> decrypt( string learner_data, unsigned long int data_dimensions, unsigned int iteration);
 };
+
+#endif //SCHEME_H
