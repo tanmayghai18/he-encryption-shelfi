@@ -6,6 +6,8 @@
 
 #include <omp.h>
 
+using namespace std;
+
 class Scheme {
 
 private:
