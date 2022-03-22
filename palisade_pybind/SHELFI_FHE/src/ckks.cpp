@@ -23,7 +23,11 @@ private:
 
 public:
 
-  Ckks(string scheme, int learners) : Scheme(scheme, learners) {};
+  Ckks(string scheme, int learners, int batchSize, int scaleFactorBits, string cryptodir) : Scheme(scheme, learners) {
+    this->batchSize = batchSize;
+    this->scaleFactorBits = scaleFactorBits;
+    this->cryptodir = cryptodir;
+  };
 
 	// Ckks(string scheme, int learners, int batchSize, int scaleFactorBits, string cryptodir) {
 

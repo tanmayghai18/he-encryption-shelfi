@@ -21,9 +21,9 @@ public:
         this->learners = learners;
     }
 
-    void loadCryptoParams();
-    void genCryptoContextAndKeyGen();
-    py::bytes encrypt(py::array_t<double> data_array, unsigned int iteration);
-    py::bytes computeWeightedAverage(py::list learners_data, py::list scaling_factors, int params);
-    py::array_t<double> decrypt( string learner_data, unsigned long int data_dimensions, unsigned int iteration);
+    virtual void loadCryptoParams();
+    virtual void genCryptoContextAndKeyGen();
+    virtual py::bytes encrypt(py::array_t<double> data_array, unsigned int iteration);
+    virtual py::bytes computeWeightedAverage(py::list learners_data, py::list scaling_factors, int params);
+    virtual py::array_t<double> decrypt( string learner_data, unsigned long int data_dimensions, unsigned int iteration);
 };
