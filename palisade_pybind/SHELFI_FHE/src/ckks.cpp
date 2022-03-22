@@ -19,7 +19,8 @@ namespace py = pybind11;
 using namespace std;
 using namespace lbcrypto;
 
-class Ckks : public Scheme {
+// class Ckks : public Scheme {
+class Ckks {
 
 private:
   string scheme;
@@ -34,7 +35,7 @@ private:
   LPPrivateKey<DCRTPoly> sk;
 
 public:
-	Ckks(string scheme, int learners, int batchSize, int scaleFactorBits, string cryptodir) : Scheme(scheme, learners) {
+	Ckks(string scheme, int learners, int batchSize, int scaleFactorBits, string cryptodir) {
     this->batchSize = batchSize;
     this->scaleFactorBits = scaleFactorBits;
     this->cryptodir = cryptodir;
@@ -54,7 +55,7 @@ public:
       	}
 	}
 
-	int genCryptoContextAndKeyGen() override {
+	int genCryptoContextAndKeyGen() {
         usint multDepth = 1;
         CryptoContext<DCRTPoly> cryptoContext = CryptoContextFactory<DCRTPoly>::genCryptoContextCKKS(multDepth, scaleFactorBits, batchSize);
         // enable features that you wish to use
@@ -87,7 +88,7 @@ public:
         return 1;
 	}
 
-	py::bytes encrypt(py::array_t<double> data_array, unsigned int iteration) override {
+	py::bytes encrypt(py::array_t<double> data_array, unsigned int iteration) {
         unsigned long int size = data_array.size();
         auto learner_Data = data_array.data();
 
@@ -132,7 +133,7 @@ public:
         return res;
 	}
 
-	py::array_t<double> decrypt(string learner_Data, unsigned long int data_dimesions, unsigned int iteration) override {
+	py::array_t<double> decrypt(string learner_Data, unsigned long int data_dimesions, unsigned int iteration) {
 		    //auto start_deserialize = std::chrono::system_clock::now();
       	const SerType::SERBINARY st;
       	stringstream ss(learner_Data);
@@ -178,7 +179,7 @@ public:
     } 
 	
 
-	py::bytes computeWeightedAverage(py::list learners_Data, py::list scalingFactors, int params) override {
+	py::bytes computeWeightedAverage(py::list learners_Data, py::list scalingFactors, int params) {
         if (learners_Data.size() != scalingFactors.size()) {
       		cout << "Error: learners_Data and scalingFactors size mismatch" << endl;
         	return "";
