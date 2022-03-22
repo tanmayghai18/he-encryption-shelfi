@@ -31,10 +31,10 @@ py::class_<Ckks, Scheme>(m, "Ckks")
             py::arg("scaleFactorBits") = 52, 
             py::arg("cryptodir") = py::str("../resources/cryptoparams/"))
       .def("loadCryptoParams", &Ckks::loadCryptoParams)
-      .def("genCryptoContextAndKeyGen", &Ckks::genCryptoContextAndKeyGen);
-      // .def("encrypt", &Ckks::encrypt)
-      // .def("decrypt", &Ckks::decrypt)
-      // .def("computeWeightedAverage", &Ckks::computeWeightedAverage);
+      .def("genCryptoContextAndKeyGen", &Ckks::genCryptoContextAndKeyGen)
+      .def("encrypt", &Ckks::encrypt)
+      .def("decrypt", &Ckks::decrypt)
+      .def("computeWeightedAverage", &Ckks::computeWeightedAverage);
 
   m.doc() = R"pbdoc(
         Pybind11 example plugin
