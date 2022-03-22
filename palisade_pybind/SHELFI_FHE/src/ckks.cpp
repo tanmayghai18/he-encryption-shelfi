@@ -23,14 +23,16 @@ private:
 
 public:
 
-	Ckks(string scheme, int learners, int batchSize, int scaleFactorBits, string cryptodir) {
+  Ckks(string scheme, int learners) : Scheme(scheme, learners) {};
 
-    using Scheme::Scheme;
+	// Ckks(string scheme, int learners, int batchSize, int scaleFactorBits, string cryptodir) {
 
-		this->batchSize = batchSize;
-		this->scaleFactorBits = scaleFactorBits;
-		this->cryptodir = cryptodir;
-	}
+    
+
+	// 	this->batchSize = batchSize;
+	// 	this->scaleFactorBits = scaleFactorBits;
+	// 	this->cryptodir = cryptodir;
+	// }
 
 	// void loadCryptoParams() override {
 	// 	    if (!Serial::DeserializeFromFile(cryptodir + "cryptocontext.txt", cc, SerType::BINARY)) {
