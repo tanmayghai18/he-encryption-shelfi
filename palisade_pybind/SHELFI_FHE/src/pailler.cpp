@@ -4,7 +4,6 @@
 #include <pybind11/stl.h>
 #include <pybind11/numpy.h>
 #include <omp.h>
-#include <scheme.h>
 
 #include "PaillierUtils.h"
 
