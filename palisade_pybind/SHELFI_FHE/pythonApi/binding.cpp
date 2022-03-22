@@ -41,10 +41,10 @@ py::class_<Paillier, Scheme>(m, "Paillier")
       .def("genPaillierRandOffline", &Paillier::genPaillierRandOffline)
       .def("addPaillierRandOffline", &Paillier::addPaillierRandOffline)
       .def("loadCryptoParams", &Paillier::loadCryptoParams)
-      .def("genCryptoContextAndKeyGen", &Paillier:genCryptoContextAndKeyGen)
+      .def("genCryptoContextAndKeyGen", &Paillier::genCryptoContextAndKeyGen)
       .def("encrypt", &Paillier::encrypt)
       .def("decrypt", &Paillier::decrypt)
-      .def("computeWeightedAverage", &Paillier::computeWeightedAverage)
+      .def("computeWeightedAverage", &Paillier::computeWeightedAverage);
 
   m.doc() = R"pbdoc(
         Pybind11 example plugin

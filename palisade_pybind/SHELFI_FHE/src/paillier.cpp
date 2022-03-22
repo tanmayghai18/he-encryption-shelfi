@@ -58,13 +58,13 @@ public:
 
 	void loadCryptoParams() override {
 		if (paillier_utils == nullptr) {
-			paillier_utils = new PaillierUtils(totalLearners, cryptodir, modulus_bits, num_bits, precision_bits);
+			paillier_utils = new PaillierUtils(learners, cryptodir, modulus_bits, num_bits, precision_bits);
 		}
 	}
 
-	void genCryptoContextAndKeyGen() override {
+	int genCryptoContextAndKeyGen() override {
 	 	if (paillier_utils == nullptr) {
-	 		paillier_utils = new PaillierUtils(totalLearners, cryptodir, modulus_bits, num_bits, precision_bits);
+	 		paillier_utils = new PaillierUtils(learners, cryptodir, modulus_bits, num_bits, precision_bits);
 	 	} 
 	 	paillier_utils->genKeys(this->cryptodir);
 	 	return 1;
@@ -87,7 +87,7 @@ public:
       	return py::bytes(enc_data);
 	}
 
-	py::array_t<double> decrypt(string learner_Data, unsigned long int data_dimesions, unsigned int iteration) override {
+	py::array_t<double> decrypt(string learner_data, unsigned long int data_dimensions, unsigned int iteration) override {
 		vector<double> dec_res;
 		paillier_utils->unmaskParams(learner_Data, data_dimesions, this->randomnessdir, iteration, dec_res);
 
@@ -100,7 +100,7 @@ public:
 		return result;
 	}
 
-	py::bytes computeWeightedAverage(py::list learners_Data, py::list scalingFactors, int params) override {
+	py::bytes computeWeightedAverage(py::list learner_data, py::list scaling_factors, int params) override {
 		if (learners_Data.size() != scalingFactors.size()) {
 			cout << "Error: learners_Data and scalingFactors size mismatch" << endl;
 			return "";
