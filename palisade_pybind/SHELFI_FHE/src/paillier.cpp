@@ -89,9 +89,9 @@ public:
 
 	py::array_t<double> decrypt(string learner_data, unsigned long int data_dimensions, unsigned int iteration) override {
 		vector<double> dec_res;
-		paillier_utils->unmaskParams(learner_Data, data_dimesions, this->randomnessdir, iteration, dec_res);
+		paillier_utils->unmaskParams(learner_data, data_dimensions, this->randomnessdir, iteration, dec_res);
 
-		auto result = py::array_t<double>(data_dimesions);
+		auto result = py::array_t<double>(data_dimensions);
 		py::buffer_info buf3 = result.request();
 		double *ptr3 = static_cast<double *>(buf3.ptr);
 		for (unsigned long int j = 0; j < dec_res.size(); j++) {
@@ -106,12 +106,12 @@ public:
 			return "";
 		}
 
-		vector<float> scaling_factors;
+		vector<float> sf;
 		vector<string> data;
 		//data.reserve(learner_data.size());
 
-		for (unsigned long int i=0; i<scaling_factors.size(); i++){
-			float sc = py::float_(scaling_factors[i]);
+		for (unsigned long int i=0; i< sf.size(); i++){
+			float sc = py::float_(sf[i]);
 			scaling_factors.push_back(sc);
 		}
 

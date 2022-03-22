@@ -178,19 +178,19 @@ public:
     } 
 	
 
-	py::bytes computeWeightedAverage(py::list learners_Data, py::list scalingFactors, int params) override {
-        if (learners_Data.size() != scalingFactors.size()) {
-      		cout << "Error: learners_Data and scalingFactors size mismatch" << endl;
+	py::bytes computeWeightedAverage(py::list learner_data, py::list scaling_factors, int params) override {
+        if (learner_data.size() != scaling_factors.size()) {
+      		cout << "Error: learner_data and scaling_factors size mismatch" << endl;
         	return "";
         }
 
         const SerType::SERBINARY st;
         vector<Ciphertext<DCRTPoly>> result_ciphertext;
 
-        for (unsigned long int i = 0; i < learners_Data.size(); i++) {
+        for (unsigned long int i = 0; i < learner_data.size(); i++) {
 
         	//auto start_deserialize = omp_get_wtime();
-        	string dat = std::string(py::str(learners_Data[i]));
+        	string dat = std::string(py::str(learner_data[i]));
 
         	stringstream ss(dat);
         	vector<Ciphertext<DCRTPoly>> learner_ciphertext;
@@ -201,7 +201,7 @@ public:
           //auto start_pwa = omp_get_wtime();
 
         	for (unsigned long int j = 0; j < learner_ciphertext.size(); j++) {
-          		float sc = py::float_(scalingFactors[i]);
+          		float sc = py::float_(scaling_factors[i]);
           		learner_ciphertext[j] = cc->EvalMult(learner_ciphertext[j], sc);
         	}
 
