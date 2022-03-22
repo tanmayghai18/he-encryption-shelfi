@@ -4,7 +4,7 @@
 #include <pybind11/stl.h>
 #include <pybind11/numpy.h>
 
-#include "../src/scheme.h"
+// #include "../src/scheme.h"
 #include "../src/ckks.cpp"
 
 #define STRINGIFY(x) #x
@@ -13,7 +13,7 @@ namespace py = pybind11;
 
 PYBIND11_MODULE(SHELFI_FHE, m) {
 
-py::class_<Scheme>(m, "Scheme");
+// py::class_<Scheme>(m, "Scheme");
 
 py::class_<Ckks, Scheme>(m, "Ckks")
         .def(py::init<std::string &, int, int, int, std::string &>(),
