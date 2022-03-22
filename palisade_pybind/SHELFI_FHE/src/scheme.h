@@ -24,7 +24,7 @@ public:
     virtual void loadCryptoParams() = 0;
     virtual int genCryptoContextAndKeyGen() = 0;
     virtual py::bytes encrypt(py::array_t<double> data_array, unsigned int iteration) = 0;
-    virtual py::bytes computeWeightedAverage(py::list learners_data, py::list scaling_factors, int params) = 0;
+    virtual py::bytes computeWeightedAverage(py::list learner_data, py::list scaling_factors, int params) = 0;
     virtual py::array_t<double> decrypt( string learner_data, unsigned long int data_dimensions, unsigned int iteration) = 0;
 };
 

@@ -101,23 +101,23 @@ public:
 	}
 
 	py::bytes computeWeightedAverage(py::list learner_data, py::list scaling_factors, int params) override {
-		if (learners_Data.size() != scalingFactors.size()) {
-			cout << "Error: learners_Data and scalingFactors size mismatch" << endl;
+		if (learner_data.size() != scaling_factors.size()) {
+			cout << "Error: learner_data and scaling_factors size mismatch" << endl;
 			return "";
 		}
 
 		vector<float> scaling_factors;
 		vector<string> data;
-		//data.reserve(learners_Data.size());
+		//data.reserve(learner_data.size());
 
-		for (unsigned long int i=0; i<scalingFactors.size(); i++){
-			float sc = py::float_(scalingFactors[i]);
+		for (unsigned long int i=0; i<scaling_factors.size(); i++){
+			float sc = py::float_(scaling_factors[i]);
 			scaling_factors.push_back(sc);
 		}
 
 
-		for (unsigned long int i = 0; i < learners_Data.size(); i++) {
-			data.push_back(std::string(py::str(learners_Data[i])) );
+		for (unsigned long int i = 0; i < learner_data.size(); i++) {
+			data.push_back(std::string(py::str(learner_data[i])) );
 		}
 
 		string result;
