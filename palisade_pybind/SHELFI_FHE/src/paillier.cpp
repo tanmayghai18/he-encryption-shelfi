@@ -5,9 +5,9 @@
 #include <pybind11/numpy.h>
 #include <omp.h>
 
-#include "../include/pailler.c"
+#include "../include/paillier.c"
 #include "../include/PaillierUtils.h"
-#include "../include/PaillerUtils.cpp"
+#include "../include/PaillierUtils.cpp"
 
 #define STRINGIFY(x) #x
 #define MACRO_STRINGIFY(x) STRINGIFY(x)
