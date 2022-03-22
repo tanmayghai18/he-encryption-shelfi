@@ -6,7 +6,7 @@
 
 #include "../src/scheme.h"
 #include "../src/ckks.cpp"
-#include "../src/pailler.cpp"
+#include "../src/paillier.cpp"
 
 #define STRINGIFY(x) #x
 #define MACRO_STRINGIFY(x) STRINGIFY(x)
