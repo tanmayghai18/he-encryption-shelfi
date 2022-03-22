@@ -58,7 +58,7 @@ target_compile_options(SHELFI_FHE PRIVATE $<$<COMPILE_LANG_AND_ID:CXX,GNU>:-Wall
 
 
 
-target_link_libraries(SHELFI_FHE PRIVATE ${OpenMP_CXX_FLAGS} gmp cryptopp)
+target_link_libraries(SHELFI_FHE PRIVATE ${OpenMP_CXX_FLAGS} gmp cryptopp scheme)
 
 
 
