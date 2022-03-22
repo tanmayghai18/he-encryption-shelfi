@@ -29,6 +29,10 @@ private:
 	int scaleFactorBits;
 	string cryptodir;
 
+  CryptoContext<DCRTPoly> cc;
+  LPPublicKey<DCRTPoly> pk;
+  LPPrivateKey<DCRTPoly> sk;
+
 public:
 	Ckks(string scheme, int learners, int batchSize, int scaleFactorBits, string cryptodir) : Scheme(scheme, learners) {
     this->batchSize = batchSize;
@@ -50,7 +54,7 @@ public:
       	}
 	}
 
-	void genCryptoContextAndKeyGen() override {
+	int genCryptoContextAndKeyGen() override {
         usint multDepth = 1;
         CryptoContext<DCRTPoly> cryptoContext = CryptoContextFactory<DCRTPoly>::genCryptoContextCKKS(multDepth, scaleFactorBits, batchSize);
         // enable features that you wish to use
