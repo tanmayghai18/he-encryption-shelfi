@@ -33,8 +33,12 @@ private:
 public:
   string scheme;
   int learners;
-  
+
 	Ckks(string scheme, int learners, int batchSize, int scaleFactorBits, string cryptodir) : Scheme(scheme, learners) {
+
+    this->scheme = scheme;
+    this->learners = learners;
+
     this->batchSize = batchSize;
     this->scaleFactorBits = scaleFactorBits;
     this->cryptodir = cryptodir;
