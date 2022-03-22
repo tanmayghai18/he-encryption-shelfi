@@ -16,6 +16,9 @@
 #define MACRO_STRINGIFY(x) STRINGIFY(x)
 namespace py = pybind11;
 
+using namespace std;
+using namespace lbcrypto;
+
 class Ckks : public Scheme {
 
 private:
