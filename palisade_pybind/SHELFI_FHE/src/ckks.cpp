@@ -25,7 +25,7 @@ public:
 
 	Ckks(string scheme, int learners, int batchSize, int scaleFactorBits, string cryptodir) {
 
-    using Scheme::Scheme(scheme, learners);
+    using Scheme::Scheme;
 
 		this->batchSize = batchSize;
 		this->scaleFactorBits = scaleFactorBits;
