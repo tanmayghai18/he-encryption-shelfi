@@ -5,7 +5,7 @@
 #include <pybind11/numpy.h>
 
 #include "scheme.cpp"
-// #include "ckks.cpp"
+#include "ckks.cpp"
 
 #define STRINGIFY(x) #x
 #define MACRO_STRINGIFY(x) STRINGIFY(x)
