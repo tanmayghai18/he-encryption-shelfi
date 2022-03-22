@@ -39,10 +39,12 @@ link_libraries(${PALISADE_LIBRARIES})
 
 
 include_directories(include)
-add_subdirectory(pybind11)
 
+
+add_subdirectory(pybind11)
 # TODO Try to find another way to remove the os specifications postfix in the .so output file.
-pybind11_add_module(SHELFI_FHE MODULE src/binding.cpp)
+pybind11_add_module(SHELFI_FHE MODULE src/main.cpp src/PaillierUtils.cpp src/paillier.c src/binding.cpp)
+#pybind11_add_module(SHELFI_FHE MODULE src/main.cpp)
 
 # EXAMPLE_VERSION_INFO is defined by setup.py and passed into the C++ code as a
 # define (VERSION_INFO) here.
