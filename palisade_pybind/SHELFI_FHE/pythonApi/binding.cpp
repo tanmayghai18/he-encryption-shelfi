@@ -15,7 +15,7 @@ PYBIND11_MODULE(SHELFI_FHE, m) {
 
 // py::class_<Scheme>(m, "Scheme");
 
-py::class_<Ckks, Scheme>(m, "Ckks")
+py::class_<Ckks>(m, "Ckks")
         .def(py::init<std::string &, int, int, int, std::string &>(),
             py::arg("scheme") = py::str("ckks"),
             py::arg("learners") = 10,
