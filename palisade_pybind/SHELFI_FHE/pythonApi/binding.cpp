@@ -6,7 +6,7 @@
 
 #include "../src/scheme.h"
 #include "../src/ckks.cpp"
-#include "../src/pailler.cpp"
+#include "../src/paillier.cpp"
 
 #define STRINGIFY(x) #x
 #define MACRO_STRINGIFY(x) STRINGIFY(x)
@@ -37,14 +37,14 @@ py::class_<Paillier, Scheme>(m, "Paillier")
             py::arg("num_bits") = 17, 
             py::arg("precision_bits") = 13,
             py::arg("cryptodir") = py::str("../resources/cryptoparams/"),
-            py::arg("randomnessdir") = py::str("../resources/random_params/"))
-      .def("genPaillierRandOffline", &Pailler::genPaillierRandOffline)
-      .def("addPaillierRandOffline", &Pailler::addPaillierRandOffline)
-      .def("loadCryptoParams", &Pailler::loadCryptoParams)
-      .def("genCryptoContextAndKeyGen", &Pailler:genCryptoContextAndKeyGen)
-      .def("encrypt", &Pailler::encrypt)
-      .def("decrypt", &Pailler::decrypt)
-      .def("computeWeightedAverage", &Pailler::computeWeightedAverage)
+            py::arg("randomnessdir") = py::str("../resources/random_params/"));
+      // .def("genPaillierRandOffline", &Pailler::genPaillierRandOffline)
+      // .def("addPaillierRandOffline", &Pailler::addPaillierRandOffline)
+      // .def("loadCryptoParams", &Pailler::loadCryptoParams)
+      // .def("genCryptoContextAndKeyGen", &Pailler:genCryptoContextAndKeyGen)
+      // .def("encrypt", &Pailler::encrypt)
+      // .def("decrypt", &Pailler::decrypt)
+      // .def("computeWeightedAverage", &Pailler::computeWeightedAverage)
 
   m.doc() = R"pbdoc(
         Pybind11 example plugin
