@@ -28,6 +28,23 @@ py::class_<Ckks, Scheme>(m, "Ckks")
       .def("decrypt", &Ckks::decrypt)
       .def("computeWeightedAverage", &Ckks::computeWeightedAverage);
 
+py::class_<Pailler, Scheme>(m, "Pailler")
+    .def(py::init<std::string &, int, int, int, int, std::string &, std::string &>(),
+            py::arg("scheme") = py::str("pailler"),
+            py::arg("learners") = 10,
+            py::arg("modulus_bits") = 2048, 
+            py::arg("num_bits") = 17, 
+            py::arg("precision_bits") = 13,
+            py::arg("cryptodir") = py::str("../resources/cryptoparams/"),
+            py::arg("randomnessdir") = py::str("../resources/random_params/"))
+      .def("genPaillierRandOffline", &Pailler::genPaillierRandOffline)
+      .def("addPaillierRandOffline", &Pailler::addPaillierRandOffline)
+      .def("loadCryptoParams", &Pailler::loadCryptoParams)
+      .def("genCryptoContextAndKeyGen", &Pailler:genCryptoContextAndKeyGen)
+      .def("encrypt", &Pailler::encrypt)
+      .def("decrypt", &Pailler::decrypt)
+      .def("computeWeightedAverage", &Pailler::computeWeightedAverage)
+
   m.doc() = R"pbdoc(
         Pybind11 example plugin
         -----------------------
