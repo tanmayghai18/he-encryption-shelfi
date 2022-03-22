@@ -7,6 +7,7 @@
 #include <omp.h>
 
 using namespace std;
+namespace py = pybind11;
 
 class Scheme {
 
