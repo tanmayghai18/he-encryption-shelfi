@@ -14,11 +14,15 @@ namespace py = pybind11;
 class Ckks : public Scheme {
 
 private:
+  int learners;
+  string scheme;
+
 	int batchSize;
 	int scaleFactorBits;
 	string cryptodir;
 
 public:
+  using Scheme::Scheme(scheme, learners);
 
 	Ckks(int batchSize, int scaleFactorBits, string cryptodir) {
 		this->batchSize = batchSize;
