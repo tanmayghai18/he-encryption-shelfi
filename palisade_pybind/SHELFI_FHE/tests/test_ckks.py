@@ -9,5 +9,5 @@ scaleFactorBits = 52
 cryptodir = "../resources/cryptoparams/"
 ckks = m.Ckks("ckks", learners, batchSize, scaleFactorBits, cryptodir)
 
-print(ckks->learners);
+print(ckks.learners);
 
