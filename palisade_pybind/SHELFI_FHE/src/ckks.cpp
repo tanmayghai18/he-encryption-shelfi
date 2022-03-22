@@ -41,7 +41,7 @@ public:
     this->cryptodir = cryptodir;
   }
 
-	void loadCryptoParams() override {
+	void loadCryptoParams() {
 		    if (!Serial::DeserializeFromFile(cryptodir + "cryptocontext.txt", cc, SerType::BINARY)) {
         	std::cout << "Could not read serialization from " << cryptodir + "cryptocontext.txt" << std::endl;
       	}
