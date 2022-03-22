@@ -21,7 +21,7 @@ Benchmarking for various crypto-systems (e.g. Pailler, CKKS) integrated with a f
 
 go to the `palisade_pybind/SHELFI_FHE/src` folder and run `pip install ../`
 
-Tests are located in the `../tests` directory (relative to dir. above) and can be run by simply running:
+Tests/Examples as wella as the `pybind11` binding code are located in the `../pythonApi` directory (relative to dir. above) and can be run by simply running:
 
-`python3 ../tests/test.py`
+`python3 ../pythonApi/[example].py`
 
