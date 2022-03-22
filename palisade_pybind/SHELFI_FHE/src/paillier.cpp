@@ -25,7 +25,7 @@ private:
 	string cryptodir;
 	string randomnessdir;
 
-	PaillierUtils* pailler_utils = nullptr;
+	PaillierUtils* paillier_utils = nullptr;
 
 public:
 	Paillier(string scheme, int learners, int modulus_bits, int num_bits, int precision_bits, string cryptodir, string randomnessdir) : Scheme(scheme, learners) {

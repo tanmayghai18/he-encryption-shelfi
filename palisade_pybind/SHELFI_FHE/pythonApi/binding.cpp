@@ -38,13 +38,13 @@ py::class_<Paillier, Scheme>(m, "Paillier")
             py::arg("precision_bits") = 13,
             py::arg("cryptodir") = py::str("../resources/cryptoparams/"),
             py::arg("randomnessdir") = py::str("../resources/random_params/"))
-      .def("genPaillierRandOffline", &Pailler::genPaillierRandOffline)
-      .def("addPaillierRandOffline", &Pailler::addPaillierRandOffline)
-      .def("loadCryptoParams", &Pailler::loadCryptoParams)
-      .def("genCryptoContextAndKeyGen", &Pailler:genCryptoContextAndKeyGen)
-      .def("encrypt", &Pailler::encrypt)
-      .def("decrypt", &Pailler::decrypt)
-      .def("computeWeightedAverage", &Pailler::computeWeightedAverage)
+      .def("genPaillierRandOffline", &Paillier::genPaillierRandOffline)
+      .def("addPaillierRandOffline", &Paillier::addPaillierRandOffline)
+      .def("loadCryptoParams", &Paillier::loadCryptoParams)
+      .def("genCryptoContextAndKeyGen", &Paillier:genCryptoContextAndKeyGen)
+      .def("encrypt", &Paillier::encrypt)
+      .def("decrypt", &Paillier::decrypt)
+      .def("computeWeightedAverage", &Paillier::computeWeightedAverage)
 
   m.doc() = R"pbdoc(
         Pybind11 example plugin
