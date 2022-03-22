@@ -29,9 +29,9 @@ py::class_<Ckks, Scheme>(m, "Ckks")
       .def("decrypt", &Ckks::decrypt)
       .def("computeWeightedAverage", &Ckks::computeWeightedAverage);
 
-py::class_<Pailler, Scheme>(m, "Pailler")
+py::class_<Paillier, Scheme>(m, "Paillier")
     .def(py::init<std::string &, int, int, int, int, std::string &, std::string &>(),
-            py::arg("scheme") = py::str("pailler"),
+            py::arg("scheme") = py::str("paillier"),
             py::arg("learners") = 10,
             py::arg("modulus_bits") = 2048, 
             py::arg("num_bits") = 17, 
