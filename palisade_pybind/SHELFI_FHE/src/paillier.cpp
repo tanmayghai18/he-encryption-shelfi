@@ -106,13 +106,13 @@ public:
 			return "";
 		}
 
-		vector<float> sf;
+		vector<float> s_f;
 		vector<string> data;
 		//data.reserve(learner_data.size());
 
-		for (unsigned long int i=0; i< sf.size(); i++){
-			float sc = py::float_(sf[i]);
-			scaling_factors.push_back(sc);
+		for (unsigned long int i=0; i< scaling_factors.size(); i++){
+			float sc = py::float_(scaling_factors[i]);
+			s_f.push_back(sc);
 		}
 
 
