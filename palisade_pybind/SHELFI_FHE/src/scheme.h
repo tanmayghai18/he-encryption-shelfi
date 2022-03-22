@@ -14,11 +14,11 @@ namespace py = pybind11;
 
 class Scheme {
 
-private:
+public:
+
     string scheme;
     int learners;
 
-public:
     Scheme(string scheme, int learners) : scheme(scheme), learners(learners){};
 
     virtual void loadCryptoParams() = 0;
