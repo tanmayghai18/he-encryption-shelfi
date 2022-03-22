@@ -13,15 +13,7 @@ namespace py = pybind11;
 
 PYBIND11_MODULE(SHELFI_FHE, m) {
 
-py::class_<Scheme>(m, "Scheme")
-        .def(py::init<std::string &, int>(),
-            py::arg("scheme") = py::str(""),
-            py::arg("learners") = 10)
-        .def("loadCryptoParams", &Scheme::loadCryptoParams)
-        .def("genCryptoContextAndKeyGen", &Scheme::genCryptoContextAndKeyGen)
-        .def("encrypt", &Scheme::encrypt)
-        .def("computeWeightedAverage", &Scheme::computeWeightedAverage)
-        .def("decrypt", &Scheme::decrypt);
+py::class_<Scheme>(m, "Scheme");
 
 // py::class_<Ckks, Scheme>(m, "Ckks")
 //         .def(py::init<std::string &, int, int, int, std::string &>(),
