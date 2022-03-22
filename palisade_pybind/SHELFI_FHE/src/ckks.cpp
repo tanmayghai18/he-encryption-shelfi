@@ -19,59 +19,61 @@ private:
 	string cryptodir;
 
 public:
+  using Scheme::Scheme;
+
 	Ckks(int batchSize, int scaleFactorBits, string cryptodir) {
 		this->batchSize = batchSize;
 		this->scaleFactorBits = scaleFactorBits;
 		this->cryptodir = cryptodir;
 	}
 
-	void loadCryptoParams() override {
-		    // if (!Serial::DeserializeFromFile(cryptodir + "cryptocontext.txt", cc, SerType::BINARY)) {
-      //   	std::cout << "Could not read serialization from " << cryptodir + "cryptocontext.txt" << std::endl;
-      // 	}
+	// void loadCryptoParams() override {
+	// 	    if (!Serial::DeserializeFromFile(cryptodir + "cryptocontext.txt", cc, SerType::BINARY)) {
+ //        	std::cout << "Could not read serialization from " << cryptodir + "cryptocontext.txt" << std::endl;
+ //      	}
 
-      // 	if (!Serial::DeserializeFromFile(cryptodir + "key-public.txt", pk, SerType::BINARY)) {
-      // 		std::cout << "Could not read public key" << std::endl;
-      // 	}
+ //      	if (!Serial::DeserializeFromFile(cryptodir + "key-public.txt", pk, SerType::BINARY)) {
+ //      		std::cout << "Could not read public key" << std::endl;
+ //      	}
 
-      // 	if (Serial::DeserializeFromFile(cryptodir + "key-private.txt", sk, SerType::BINARY) == false) {
-      // 		std::cerr << "Could not read secret key" << std::endl;
-      // 	}
-	}
+ //      	if (Serial::DeserializeFromFile(cryptodir + "key-private.txt", sk, SerType::BINARY) == false) {
+ //      		std::cerr << "Could not read secret key" << std::endl;
+ //      	}
+	// }
 
-	void genCryptoContextAndKeyGen() override {
-        // usint multDepth = 1;
-        // CryptoContext<DCRTPoly> cryptoContext = CryptoContextFactory<DCRTPoly>::genCryptoContextCKKS(multDepth, scaleFactorBits, batchSize);
+	// void genCryptoContextAndKeyGen() override {
+ //        usint multDepth = 1;
+ //        CryptoContext<DCRTPoly> cryptoContext = CryptoContextFactory<DCRTPoly>::genCryptoContextCKKS(multDepth, scaleFactorBits, batchSize);
 
-        // // enable features that you wish to use
-        // cryptoContext->Enable(ENCRYPTION);
-        // cryptoContext->Enable(SHE);
-        // // cryptoContext->Enable(LEVELEDSHE);
+ //        // enable features that you wish to use
+ //        cryptoContext->Enable(ENCRYPTION);
+ //        cryptoContext->Enable(SHE);
+ //        // cryptoContext->Enable(LEVELEDSHE);
 
-        // string cryptocontext_file = "cryptocontext.txt";
-        // string public_key_file = "key-public.txt";
-        // string private_key_file = "key-private.txt";
+ //        string cryptocontext_file = "cryptocontext.txt";
+ //        string public_key_file = "key-public.txt";
+ //        string private_key_file = "key-private.txt";
 
 
-        // if (!Serial::SerializeToFile(cryptodir + cryptocontext_file, cryptoContext, SerType::BINARY)) {
-        // std::cerr << "Error writing serialization of the crypto context to "<<cryptocontext_file<< std::endl;
-        // return 0;
-        // }
+ //        if (!Serial::SerializeToFile(cryptodir + cryptocontext_file, cryptoContext, SerType::BINARY)) {
+ //        std::cerr << "Error writing serialization of the crypto context to "<<cryptocontext_file<< std::endl;
+ //        return 0;
+ //        }
 
-        // LPKeyPair<DCRTPoly> keyPair = cryptoContext->KeyGen();
+ //        LPKeyPair<DCRTPoly> keyPair = cryptoContext->KeyGen();
 
-        // if (!Serial::SerializeToFile(cryptodir + public_key_file, keyPair.publicKey, SerType::BINARY)) {
-        // std::cerr << "Error writing serialization of public key to "<<public_key_file<< std::endl;
-        // return 0;
-        // }
+ //        if (!Serial::SerializeToFile(cryptodir + public_key_file, keyPair.publicKey, SerType::BINARY)) {
+ //        std::cerr << "Error writing serialization of public key to "<<public_key_file<< std::endl;
+ //        return 0;
+ //        }
 
-        // if (!Serial::SerializeToFile(cryptodir + private_key_file, keyPair.secretKey, SerType::BINARY)) {
-        // std::cerr<< "Error writing serialization of private key to "<<private_key_file<< std::endl;
-        // return 0;
-        // }
+ //        if (!Serial::SerializeToFile(cryptodir + private_key_file, keyPair.secretKey, SerType::BINARY)) {
+ //        std::cerr<< "Error writing serialization of private key to "<<private_key_file<< std::endl;
+ //        return 0;
+ //        }
 
-        // return 1;
-	}
+ //        return 1;
+	// }
 
 	// py::bytes encrypt(py::array_t<double> data_array, unsigned int iteration) override {
 	// 	unsigned long int size = data_array.size();
@@ -233,14 +235,13 @@ public:
 
 PYBIND11_MODULE(SHELFI_FHE, m) {
 
-py::class_<Ckks>(m, "Ckks")
+py::class_<Scheme, Ckks>(m, "Ckks")
 		.def(py::init<int, int, int, std::string &>(),
-                py::arg("learners") = 10,
                 py::arg("batchSize") = 8192, 
                 py::arg("scaleFactorBits") = 52, 
                 py::arg("cryptodir") = py::str("../resources/cryptoparams/"))
       .def("loadCryptoParams", &Ckks::loadCryptoParams)
-      .def("genCryptoContextAndKeyGen", &Ckks:genCryptoContextAndKeyGen);
+      .def("genCryptoContextAndKeyGen", &Ckks::genCryptoContextAndKeyGen);
       // .def("encrypt", &Ckks::encrypt)
       // .def("decrypt", &Ckks::decrypt)
       // .def("computeWeightedAverage", &Ckks::computeWeightedAverage);
