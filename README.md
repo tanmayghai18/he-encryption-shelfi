@@ -1,6 +1,6 @@
 # he-encryption-shelfi
 
-Benchmarking for various crypto-systems (e.g. Pailler, CKKS) integrated with a federated learning architecture
+Benchmarking for various crypto-systems (e.g. Paillier, CKKS) integrated with a federated learning architecture
 
 `FHE_CPP`: cpp only implementation for CKKS 
 
@@ -8,7 +8,7 @@ Benchmarking for various crypto-systems (e.g. Pailler, CKKS) integrated with a f
 
 `palisade_pybind`: implementation of private weighted average integrated with underlying schemes with python wrapper and bindings. 
 
-### Dependencies (tested on Ubuntu based linux systems)
+### Dependencies (tested in Ubuntu)
 - `PALISADE`: a lattice-based homomorphic encryption library in C++. Follow the instructions on https://gitlab.com/palisade/palisade-release to download, compile, and install the library. Make sure to run `make install` in the user-created `\build` directory for a complete installation. 
 
 - `Crypto++`: a Linux cryptographic library to provide various functionality (we primarily utilize this for our Pailler implementation). Follow the instructions https://github.com/weidai11/cryptopp and make sure to run `make install` in the root dir. of the library for a complete install.
