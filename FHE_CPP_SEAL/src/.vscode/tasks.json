@@ -1,0 +1,30 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+      {
+        "label": "Build with Clang",
+        "type": "shell",
+        "command": "clang++",
+        "args": [
+          "-std=c++14",
+          "-stdlib=libc++",
+          "LogisticRegression.cpp",
+          "Party.cpp",
+
+          "PartyA.cpp",
+          "PartyB.cpp",
+          "SecureComputationUtils.cpp",
+          "PartyMediator.cpp",
+          "main.cpp",
+          "-o",
+          "main.out",
+          "-Wno-pragma-once-outside-header",
+          "--debug"
+        ],
+        "group": {
+          "kind": "build",
+          "isDefault": true
+        }
+      }
+    ]
+  }
