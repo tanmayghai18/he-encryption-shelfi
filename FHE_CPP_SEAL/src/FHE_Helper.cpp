@@ -121,6 +121,7 @@ void FHE_Helper::encrypt(vector<double>& learner_Data, vector<string>& result) {
 
           #pragma omp parallel for
           for (unsigned long int i = 0; i < size; i += batchSize) {
+          
 
             unsigned long int last = std::min((long)size, (long)i + batchSize);
 

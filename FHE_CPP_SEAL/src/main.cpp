@@ -6,7 +6,6 @@
 //  Copyright © 2019 Hamza Saleem. All rights reserved.
 //
 
-#pragma once
 
 #include "FHE_Helper.hpp"
 #include <iomanip>
@@ -196,7 +195,7 @@ int main(int argc, const char * argv[]) {
     unsigned int scalingBits = 40;
     string enc_scheme = "ckks";
     string crypto_params_dir = "CryptoParams/";
-    unsigned int total_params = 25000;
+    unsigned int total_params = 1000000;
 
     FHE_Helper* fhe_helper = new FHE_Helper(enc_scheme, batch_size, scalingBits, crypto_params_dir);
 
@@ -206,27 +205,36 @@ int main(int argc, const char * argv[]) {
 
     //Learner 1 Data
     vector<double> data1;
-    for(int i=0; i<total_params; i++){
+    for(unsigned int i=0; i<total_params; i++){
 
         data1.push_back(0.01);
 
     }
+    
+    cout<<"Learner 1:"<<endl;
+    print_vector(data1);
 
     //Learner 2 Data
     vector<double> data2;
-    for(int i=0; i<total_params; i++){
+    for(unsigned int i=0; i<total_params; i++){
 
         data2.push_back(0.5);
 
     }
+    
+    cout<<"Learner 2:"<<endl;
+    print_vector(data2);
 
     //Learner 3 Data
     vector<double> data3;
-    for(int i=0; i<total_params; i++){
+    for(unsigned int i=0; i<total_params; i++){
 
         data3.push_back(-1.2);
 
     }
+    
+    cout<<"Learner 3:"<<endl;
+    print_vector(data3);
 
     vector<vector<string>> learners_Data;
 
@@ -259,8 +267,12 @@ int main(int argc, const char * argv[]) {
     fhe_helper->decrypt(he_result, total_params, dec_result);
 
 
-    cout<<"result size: "<<dec_result.size()<<endl;
+    cout<<"Result: 0.5 * L1_data + 0.2 * L2_data + 0.3 * L3_data"<<endl;
+    
+    
     print_vector(dec_result);
+    
+    cout<<"result size: "<<dec_result.size()<<endl;
     
 
 
