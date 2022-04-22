@@ -1,3 +1,11 @@
+# Running FHE CPP with SEAL
+
+cd FHE_CPP_SEAL
+cmake -B build
+cmake --build build
+./build/bin/shelfi
+
+
 # he-encryption-shelfi
 
 Benchmarking for various crypto-systems (e.g. Paillier, CKKS) integrated with a federated learning architecture
