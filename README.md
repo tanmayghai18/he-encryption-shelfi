@@ -1,12 +1,12 @@
 # Running FHE CPP with SEAL
 
-cd FHE_CPP_SEAL
+`cd FHE_CPP_SEAL`
 
-cmake -B build
+`cmake -B build`
 
-cmake --build build
+`cmake --build build`
 
-./build/bin/shelfi
+`./build/bin/shelfi`
 
 
 # he-encryption-shelfi
