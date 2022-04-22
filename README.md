@@ -1,5 +1,7 @@
 # Running FHE CPP with SEAL
 
+Install SEAL library system wide following instructions on: `https://github.com/microsoft/SEAL`
+
 `cd FHE_CPP_SEAL`
 
 `cmake -B build`
