@@ -1,0 +1,303 @@
+#include "ckks.h"
+
+CKKS::CKKS(string scheme, uint batchSize, uint scaleFactorBits, string cryptodir):Scheme(scheme){
+
+    this->batchSize = batchSize;
+    this->scaleFactorBits = scaleFactorBits;
+    this->cryptodir = cryptodir;
+
+}
+
+void CKKS::loadCryptoParams() {
+
+	EncryptionParameters parms;
+
+	std::ifstream file( cryptodir + "cryptocontext.txt" );
+	if(file){
+		parms.load(file);
+		file.close();
+	}
+	else{
+		std::cout << "Could not read cryptocontext"<< std::endl;
+		return;
+	}
+
+	this->context = new SEALContext(parms);
+
+
+	std::ifstream file_sk( cryptodir + "key-private.txt" );
+	if(file_sk){
+		secret_key.load(*(this->context), file_sk);
+		file_sk.close();
+	}
+	else{
+		std::cout << "Could not read key-private"<< std::endl;
+	}
+
+	std::ifstream file_pk( cryptodir + "key-public.txt" );
+	if(file_pk){
+		public_key.load(*(this->context), file_pk);
+		file_pk.close();
+	}
+	else{
+		std::cout << "Could not read key-public"<< std::endl;
+	}
+		
+	
+}
+
+
+int CKKS::genCryptoContextAndKeyGen() {
+
+
+	EncryptionParameters parms(scheme_type::ckks);
+	size_t poly_modulus_degree = batchSize*2;
+	parms.set_poly_modulus_degree(poly_modulus_degree);
+	parms.set_coeff_modulus(CoeffModulus::Create(poly_modulus_degree, { 60, 40, 60 }));
+
+	this->context = new SEALContext(parms);
+	KeyGenerator keygen(*(this->context));
+	this->secret_key = keygen.secret_key();
+	keygen.create_public_key(this->public_key);
+
+
+	std::ofstream outFile;
+	outFile.open(cryptodir + "cryptocontext.txt");
+	parms.save(outFile);
+	outFile.close();
+
+
+	std::ofstream outFile_secret_key;
+	outFile_secret_key.open(cryptodir + "key-private.txt");
+	this->secret_key.save(outFile_secret_key);
+	outFile_secret_key.close();
+
+
+	std::ofstream outFile_public_key;
+	outFile_public_key.open(cryptodir + "key-public.txt");
+	this->public_key.save(outFile_public_key);
+	outFile_public_key.close();
+
+
+	return 1;
+
+          
+}
+
+
+py::bytes CKKS::encrypt(py::array_t<double> data_array){
+
+
+	unsigned long int size = data_array.size();
+	auto learner_Data = data_array.data();
+
+	double scale = pow(2.0, scaleFactorBits);
+
+	vector<string> result_vec;
+	result_vec.resize((int)((size + batchSize) / batchSize));
+
+
+    if (size > (unsigned long int)batchSize) {
+
+        #pragma omp parallel for
+        for (unsigned long int i = 0; i < size; i += batchSize) {
+
+          unsigned long int last = std::min((long)size, (long)i + batchSize);
+
+          vector<double> batch;
+          batch.reserve(last - i + 1);
+
+          for (unsigned long int j = i; j < last; j++) {
+
+            batch.push_back(learner_Data[j]);
+          }
+
+          CKKSEncoder encoder(*(this->context));
+          Plaintext plaintext_data;
+          encoder.encode(batch, scale, plaintext_data);
+
+          Ciphertext ciphertext_data;
+          Encryptor encryptor(*(this->context), this->public_key);
+          encryptor.encrypt(plaintext_data, ciphertext_data);
+
+          stringstream enc_data;
+          ciphertext_data.save(enc_data);
+          result_vec[i/batchSize] = enc_data.str();
+
+
+        }
+
+      }
+
+      else {
+
+
+		vector<double> batch;
+		batch.reserve(size);
+
+		for (unsigned long int i = 0; i < size; i++) {
+
+			batch.push_back(learner_Data[i]);
+		}
+
+
+		CKKSEncoder encoder(*(this->context));
+		Plaintext plaintext_data;
+		encoder.encode(batch, scale, plaintext_data);
+
+		Ciphertext ciphertext_data;
+		Encryptor encryptor(*(this->context), this->public_key);
+		encryptor.encrypt(plaintext_data, ciphertext_data);
+
+		stringstream enc_data;
+        ciphertext_data.save(enc_data);
+        result_vec[0] = enc_data.str();
+
+        }
+
+        string result;
+
+
+        result.reserve(result_vec.size() * result_vec[0].length());
+
+        for (unsigned int i = 0; i < result_vec.size(); i++) {
+
+			result+= result_vec[i];
+		}
+
+
+		return py::bytes(result);
+
+
+}
+
+
+py::bytes CKKS::computeWeightedAverage(py::list learners_Data, py::list scalingFactors){
+
+
+	if (learners_Data.size() != scalingFactors.size()) {
+			cout << "Error: learner_data and scaling_factors size mismatch" << endl;
+			return "";
+		}
+
+  
+  	Evaluator evaluator(*(this->context));
+  	CKKSEncoder encoder(*(this->context));
+  	double scale = pow(2.0, scaleFactorBits);
+
+    vector<Ciphertext> result_ciphertext;
+
+    for (unsigned int i = 0; i < learners_Data.size(); i++) {
+
+    	Plaintext plain_sc;
+    	float sc = py::float_(scalingFactors[i]);
+		encoder.encode(sc, scale, plain_sc);
+
+    	vector<Ciphertext> learner_ciphertext;
+
+
+
+    	stringstream stream(std::string(py::str(learners_Data[i])));
+
+    	while(stream.rdbuf()->in_avail() != 0){
+
+    		Ciphertext cipher_data;
+    		cipher_data.load(*(this->context), stream);
+
+    		Ciphertext res;
+    		evaluator.multiply_plain(cipher_data, plain_sc, res);
+    		learner_ciphertext.push_back(res);
+
+    	}
+
+
+
+		if (result_ciphertext.size() == 0) {
+
+			result_ciphertext = learner_ciphertext;
+		}
+
+		else {
+
+			for (unsigned int j = 0; j < learner_ciphertext.size(); j++) {
+
+				evaluator.add_inplace(result_ciphertext[j], learner_ciphertext[j]);
+
+			}
+		}
+
+
+	}
+
+
+	stringstream ss;
+
+	for(unsigned int i=0; i<result_ciphertext.size(); i++){
+		
+		result_ciphertext[i].save(ss); 
+
+	}
+
+
+	return py::bytes(ss.str());
+
+
+}
+
+
+py::array_t<double> CKKS::decrypt(string learner_Data, unsigned long int data_dimesions){
+
+
+	vector<double> result;
+
+	result.resize(batchSize+data_dimesions);
+
+	stringstream stream(learner_Data);
+
+	vector<Ciphertext> learner_ciphertext;
+
+	while(stream.rdbuf()->in_avail() != 0){
+
+		Ciphertext cipher_data;
+		cipher_data.load(*(this->context), stream);
+		learner_ciphertext.push_back(cipher_data);
+	}
+
+
+	#pragma omp parallel for
+	for(unsigned int i =0; i<learner_ciphertext.size(); i++){
+
+		Plaintext plain_data;
+		Decryptor decryptor(*(this->context), this->secret_key);
+		CKKSEncoder encoder(*(this->context));
+		vector<double> res_dec;
+
+		decryptor.decrypt(learner_ciphertext[i], plain_data);
+		encoder.decode(plain_data, res_dec);
+
+
+		for(unsigned int j=0; j<res_dec.size(); j++){
+
+			result[i*batchSize + j]= res_dec[j];
+		}
+
+
+	}
+
+
+	result.resize(data_dimesions);
+
+
+	auto result_vec = py::array_t<double>(data_dimesions);
+	py::buffer_info buf3 = result_vec.request();
+	double *ptr3 = static_cast<double *>(buf3.ptr);
+	
+	for (unsigned long int j = 0; j < result.size(); j++) {
+		ptr3[j] = result[j];
+	}
+	
+
+	return result_vec;
+
+
+}
