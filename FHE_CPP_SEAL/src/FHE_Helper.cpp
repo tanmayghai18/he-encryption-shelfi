@@ -101,82 +101,82 @@ int FHE_Helper::genCryptoContextAndKeys() {
 }
 
 
-void FHE_Helper::encrypt(vector<double>& learner_Data, vector<string>& result) {
-
+void FHE_Helper::encrypt(vector<double>& learner_Data, string& result) {
 
 	double scale = pow(2.0, scaleFactorBits);
-
 	unsigned long int size = learner_Data.size();
 
-
-	result.resize((int)((size + batchSize) / batchSize));
-
-
-    //vector<Ciphertext> ciphertext_data((int)((size + batchSize) / batchSize));
-
-    if(scheme == "ckks"){
-
-      if (size > (unsigned long int)batchSize) {
+	vector<string> result_vec;
+	result_vec.resize((int)((size + batchSize) / batchSize));
 
 
-          #pragma omp parallel for
-          for (unsigned long int i = 0; i < size; i += batchSize) {
-          
+  if(scheme == "ckks"){
 
-            unsigned long int last = std::min((long)size, (long)i + batchSize);
-
-            vector<double> batch;
-            batch.reserve(last - i + 1);
-
-            for (unsigned long int j = i; j < last; j++) {
-
-              batch.push_back(learner_Data[j]);
-            }
-
-            CKKSEncoder encoder(*(this->context));
-            Plaintext plaintext_data;
-            encoder.encode(batch, scale, plaintext_data);
-
-            Ciphertext ciphertext_data;
-            Encryptor encryptor(*(this->context), this->public_key);
-            encryptor.encrypt(plaintext_data, ciphertext_data);
-
-            stringstream enc_data;
-            ciphertext_data.save(enc_data);
-            result[i/batchSize] = enc_data.str();
+    if (size > (unsigned long int)batchSize) {
 
 
-          }
+        #pragma omp parallel for
+        for (unsigned long int i = 0; i < size; i += batchSize) {
 
-        }
+	          unsigned long int last = std::min((long)size, (long)i + batchSize);
 
-        else {
+	          vector<double> batch;
+	          batch.reserve(last - i + 1);
 
-			vector<double> batch;
-			batch.reserve(size);
+	          for (unsigned long int j = i; j < last; j++) {
 
-			for (unsigned long int i = 0; i < size; i++) {
+	            batch.push_back(learner_Data[j]);
+	          }
 
-			batch.push_back(learner_Data[i]);
-			}
+	          CKKSEncoder encoder(*(this->context));
+	          Plaintext plaintext_data;
+	          encoder.encode(batch, scale, plaintext_data);
 
+	          Ciphertext ciphertext_data;
+	          Encryptor encryptor(*(this->context), this->public_key);
+	          encryptor.encrypt(plaintext_data, ciphertext_data);
 
-			CKKSEncoder encoder(*(this->context));
-			Plaintext plaintext_data;
-			encoder.encode(batch, scale, plaintext_data);
-
-			Ciphertext ciphertext_data;
-			Encryptor encryptor(*(this->context), this->public_key);
-			encryptor.encrypt(plaintext_data, ciphertext_data);
-
-			stringstream enc_data;
-            ciphertext_data.save(enc_data);
-            result[0] = enc_data.str();
+	          stringstream enc_data;
+	          ciphertext_data.save(enc_data);
+	          result_vec[i/batchSize] = enc_data.str();
 
 
         }
 
+      }
 
+      else {
+
+					vector<double> batch;
+					batch.reserve(size);
+
+					for (unsigned long int i = 0; i < size; i++) {
+
+						batch.push_back(learner_Data[i]);
+					}
+
+
+					CKKSEncoder encoder(*(this->context));
+					Plaintext plaintext_data;
+					encoder.encode(batch, scale, plaintext_data);
+
+					Ciphertext ciphertext_data;
+					Encryptor encryptor(*(this->context), this->public_key);
+					encryptor.encrypt(plaintext_data, ciphertext_data);
+
+					stringstream enc_data;
+	        ciphertext_data.save(enc_data);
+	        result_vec[0] = enc_data.str();
+
+        }
+
+
+        result.reserve(result_vec.size() * result_vec[0].length());
+
+        for (unsigned int i = 0; i < result_vec.size(); i++) {
+
+						result+= result_vec[i];
+				}
 
     }
 
@@ -192,7 +192,7 @@ void FHE_Helper::encrypt(vector<double>& learner_Data, vector<string>& result) {
 }
 
 
-void FHE_Helper::computeWeightedAverage(vector<vector<string>>& learners_Data, vector<float>& scalingFactors, vector<string>& result){
+void FHE_Helper::computeWeightedAverage(vector<string>& learners_Data, vector<float>& scalingFactors, string& result){
 
 
   if (learners_Data.size() != scalingFactors.size()) {
@@ -212,22 +212,23 @@ void FHE_Helper::computeWeightedAverage(vector<vector<string>>& learners_Data, v
 
     	Plaintext plain_sc;
     	float sc = scalingFactors[i];
-		encoder.encode(sc, scale, plain_sc);
+			encoder.encode(sc, scale, plain_sc);
 
     	vector<Ciphertext> learner_ciphertext;
-    	for(unsigned int j = 0; j < learners_Data[i].size(); j++){
 
-    		stringstream stream(learners_Data[i][j]);
+    	stringstream stream(learners_Data[i]);
+
+    	while(stream.rdbuf()->in_avail() != 0){
+
     		Ciphertext cipher_data;
     		cipher_data.load(*(this->context), stream);
 
     		Ciphertext res;
-
     		evaluator.multiply_plain(cipher_data, plain_sc, res);
-
     		learner_ciphertext.push_back(res);
 
     	}
+
 
 
 		if (result_ciphertext.size() == 0) {
@@ -248,14 +249,17 @@ void FHE_Helper::computeWeightedAverage(vector<vector<string>>& learners_Data, v
 	}
 
 
-	result.resize(learners_Data[0].size());
-	for(unsigned int i=0; i<result.size(); i++){
+	stringstream ss;
 
-		stringstream ss;
+	for(unsigned int i=0; i<result_ciphertext.size(); i++){
+		
 		result_ciphertext[i].save(ss); 
-        result[i] = ss.str();
 
 	}
+
+
+	result = ss.str();
+
 
   }
 
@@ -271,23 +275,31 @@ void FHE_Helper::computeWeightedAverage(vector<vector<string>>& learners_Data, v
 
 
 
-void FHE_Helper::decrypt(vector<string>& learner_Data, unsigned long int data_dimesions, vector<double>& result){
+void FHE_Helper::decrypt(string& learner_Data, unsigned long int data_dimesions, vector<double>& result){
 
-	result.resize(batchSize*learner_Data.size());
+	result.resize(batchSize+data_dimesions);
+
+	stringstream stream(learner_Data);
+
+	vector<Ciphertext> learner_ciphertext;
+
+	while(stream.rdbuf()->in_avail() != 0){
+
+		Ciphertext cipher_data;
+		cipher_data.load(*(this->context), stream);
+		learner_ciphertext.push_back(cipher_data);
+	}
 
 
 	#pragma omp parallel for
-	for(unsigned int i =0; i<learner_Data.size(); i++){
+	for(unsigned int i =0; i<learner_ciphertext.size(); i++){
 
-		Ciphertext cipher_data;
 		Plaintext plain_data;
-		stringstream stream(learner_Data[i]);
 		Decryptor decryptor(*(this->context), this->secret_key);
 		CKKSEncoder encoder(*(this->context));
 		vector<double> res_dec;
 
-		cipher_data.load(*(this->context), stream);
-		decryptor.decrypt(cipher_data, plain_data);
+		decryptor.decrypt(learner_ciphertext[i], plain_data);
 		encoder.decode(plain_data, res_dec);
 
 

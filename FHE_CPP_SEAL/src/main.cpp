@@ -6,7 +6,6 @@
 //  Copyright © 2019 Hamza Saleem. All rights reserved.
 //
 
-
 #include "FHE_Helper.hpp"
 #include <iomanip>
 
@@ -236,15 +235,21 @@ int main(int argc, const char * argv[]) {
     cout<<"Learner 3:"<<endl;
     print_vector(data3);
 
-    vector<vector<string>> learners_Data;
+    vector<string> learners_Data;
 
     // encrypt data vector
-    vector<string> result1;
-    vector<string> result2;
-    vector<string> result3;
+    string result1;
+    string result2;
+    string result3;
+
+    cout<<"Starting Encryption"<<endl;
+    
     fhe_helper->encrypt(data1, result1);
+    cout<<"Encryption 1 done"<<endl;
     fhe_helper->encrypt(data2, result2);
+    cout<<"Encryption 2 done"<<endl;
     fhe_helper->encrypt(data3, result3);
+    cout<<"Encryption 3 done"<<endl;
 
 
     learners_Data.push_back(result1);
@@ -259,12 +264,16 @@ int main(int argc, const char * argv[]) {
     scalingFactors.push_back(0.3);
 
     //compute PWA of 3 learners 0.5 * L1_data + 0.2 * L2_data + 0.3 * L3_data
-    vector<string> he_result;
+    string he_result;
     fhe_helper->computeWeightedAverage(learners_Data, scalingFactors, he_result);
+
+    cout<<"PWA Done"<<endl;
 
 
     vector<double> dec_result;
     fhe_helper->decrypt(he_result, total_params, dec_result);
+
+    cout<<"Decrypt done"<<endl;
 
 
     cout<<"Result: 0.5 * L1_data + 0.2 * L2_data + 0.3 * L3_data"<<endl;

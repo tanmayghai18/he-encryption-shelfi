@@ -30,9 +30,9 @@ class FHE_Helper{
       int genCryptoContextAndKeys();
       void load_crypto_params();
 
-      void encrypt(vector<double>& data_array, vector<string>& result); // returns a vector of size data_array.size()/batchSize
-      void computeWeightedAverage(vector<vector<string>>& learners_Data, vector<float>& scalingFactors, vector<string>& result);
-      void decrypt(vector<string>& learner_Data, unsigned long int data_dimesions, vector<double>& result);
+      void encrypt(vector<double>& data_array, string& result); 
+      void computeWeightedAverage(vector<string>& learners_Data, vector<float>& scalingFactors, string& result);
+      void decrypt(string& learner_Data, unsigned long int data_dimesions, vector<double>& result);
 
 
 
