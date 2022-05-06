@@ -18,6 +18,10 @@ set(CMAKE_MODULE_PATH
     ${CMAKE_MODULE_PATH}
 )
 
+include_directories(include)
+include_directories(src)
+
+
 find_package(GMP REQUIRED)
 
 set(CMAKE_CXX_FLAGS ${PALISADE_CXX_FLAGS})
@@ -39,7 +43,7 @@ include_directories(include)
 
 add_subdirectory(pybind11)
 # TODO Try to find another way to remove the os specifications postfix in the .so output file.
-pybind11_add_module(SHELFI_FHE "./pythonApi/binding.cpp" "./include/PaillierUtils.cpp" "./include/paillier.c")
+pybind11_add_module(SHELFI_FHE MODULE src/binding.cpp src/ckks.cpp)
 
 # EXAMPLE_VERSION_INFO is defined by setup.py and passed into the C++ code as a
 # define (VERSION_INFO) here.
@@ -57,3 +61,12 @@ install(TARGETS SHELFI_FHE LIBRARY DESTINATION lib)
 # generated pybind11 shared object has the OS distribution as part of its suffix.
 # Name target as `target_name` with ".so" extension.
 set_target_properties(SHELFI_FHE PROPERTIES PREFIX "" SUFFIX ".so")
+
+
+
+#find_package(pybind11 REQUIRED)
+#include_directories(${pybind11_INCLUDE_DIRS})
+
+
+add_executable(SHELFI_FHE_MAIN src/main.cpp src/ckks.cpp)
+target_link_libraries(SHELFI_FHE_MAIN PRIVATE pybind11::embed)
