@@ -16,25 +16,25 @@ Benchmarking for various crypto-systems (e.g. Paillier, CKKS) integrated with a 
 - `pybind-11`: pip install pybind11, make sure to have have `python3` and `cmake` already installed. 
 - `GMP`: install gmp using the following commands:
 
-PREFIX=/usr/local  # Change this to install GMP wherever you want.
+  PREFIX=/usr/local  # Change this to install GMP wherever you want.
 
-curl -fLO https://gmplib.org/download/gmp/gmp-6.2.1.tar.xz
+  curl -fLO https://gmplib.org/download/gmp/gmp-6.2.1.tar.xz
 
-tar -xf gmp-6.2.1.tar.xz
+  tar -xf gmp-6.2.1.tar.xz
 
-cd gmp-6.2.1
+  cd gmp-6.2.1
 
-./configure --prefix=$PREFIX
+  ./configure --prefix=$PREFIX
 
-make all
+  make all
 
-make install
+  make install
 
-cp gmpxx.h $PREFIX/include
+  cp gmpxx.h $PREFIX/include
 
-export GMP_INC=$PREFIX/include
+  export GMP_INC=$PREFIX/include
 
-export GMP_LIB=$PREFIX/lib
+  export GMP_LIB=$PREFIX/lib
 
 - `Clang`: install clang and set it as the default compiler
 
