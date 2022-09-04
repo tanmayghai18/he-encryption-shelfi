@@ -28,6 +28,7 @@ public:
     virtual string computeWeightedAverage_cpp(vector<string> learners_Data, vector<float> scalingFactors) = 0;
     virtual py::array_t<double> decrypt( string learner_data, unsigned long int data_dimensions) = 0;
     virtual vector<double> decrypt_cpp(string learner_Data, unsigned long int data_dimesions) = 0;
+    virtual ~Scheme() = default;
 };
 
 #endif //SCHEME_H
